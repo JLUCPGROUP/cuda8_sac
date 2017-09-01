@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="kernel.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{61ad7f72-f4f4-4194-8a6f-6f955f39a88f}</UniqueIdentifier>
+      <Extensions>.xml</Extensions>
+    </Filter>
+    <Filter Include="XModel">
+      <UniqueIdentifier>{a80ea312-14f7-4adb-b3b8-400760bb83e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HModel">
+      <UniqueIdentifier>{c2b7c005-b222-4397-8b9a-9248dfba9e46}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="queens-4_ext.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="queens-12_ext.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="XMLFile.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="XMLFileNeg.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="XMLFileNeg2.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="BMPath.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="XBuilder.cpp">
+      <Filter>XModel</Filter>
+    </ClCompile>
+    <ClCompile Include="XModel.cpp">
+      <Filter>XModel</Filter>
+    </ClCompile>
+    <ClCompile Include="HModel.cpp">
+      <Filter>HModel</Filter>
+    </ClCompile>
+    <ClCompile Include="HBuilder.cpp">
+      <Filter>HModel</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="XBuilder.h">
+      <Filter>XModel</Filter>
+    </ClInclude>
+    <ClInclude Include="XModel.h">
+      <Filter>XModel</Filter>
+    </ClInclude>
+    <ClInclude Include="HModel.h">
+      <Filter>HModel</Filter>
+    </ClInclude>
+    <ClInclude Include="HBuilder.h">
+      <Filter>HModel</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
