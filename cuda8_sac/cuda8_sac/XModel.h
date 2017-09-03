@@ -1,6 +1,10 @@
 #pragma once
 #include <string>
+
 namespace cudacp {
+
+
+
 
 typedef unsigned int u32;
 /**
@@ -9,6 +13,17 @@ typedef unsigned int u32;
 */
 const int MAX_VALUE = INT_MAX - 4096;	///<最大值
 const int MAX_OPT = INT_MIN + 4096;		///<最小值
+
+/**
+* \brief some elements in prediction expression
+*/
+enum PredictionElement {
+	PE_OP, PE_VAL, PE_VAR
+};
+
+enum OpType {
+	OT_PAR = 0, OT__SIG_OP = 1, OT_BI_OP = 2,
+};
 
 /**
 * \brief operator for predicate

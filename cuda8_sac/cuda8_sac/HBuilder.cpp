@@ -16,6 +16,7 @@ HBuilder::HBuilder(XModel * xmodel, HModel * hmodel)
 
 	hm->property.vs_size = xm->feature.vs_size;
 	hm->property.ts_size = xm->feature.cs_size;
+	hm->property.max_dom_size = xm->feature.max_dom_size;
 	hm->vars = new HVar*[hm->property.vs_size];
 	hm->tabs = new HTab*[hm->property.ts_size];
 
@@ -68,6 +69,14 @@ void HBuilder::getIntTuple(int idx, int * t, const XCon * c) {
 	}
 }
 
+void HBuilder::getIntTuple(int idx, std::vector<int>& t, const XCon * c) {
+	for (int i = (c->arity - 1); i >= 0; --i) {
+		XDom* d = xm->doms[xm->vars[c->scope[i]]->dom_id];
+		t[i] = d->values[(idx % (d->size))];
+		idx /= (d->size);
+	}
+}
+
 bool HBuilder::isEqual(const int * lh, const int * rh, const int len) {
 	for (int i = 0; i < len; ++i)
 		if (lh[i] != rh[i])
@@ -89,14 +98,16 @@ void HBuilder::generateHVars() {
 void HBuilder::generateHTab() {
 	//若为约束EXT
 	for (int i = 0; i < xm->feature.cs_size; ++i) {
-		const XCon* c = xm->cons[i];
+		XCon* c = xm->cons[i];
 
 		if (c->type == EXT)
 			EXTConToTab(c);
+		else
+			INTConToTab(c);
 	}
 }
 
-void HBuilder::EXTConToTab(const XCon * c) {
+void HBuilder::EXTConToTab(XCon * c) {
 	const XRel* r = xm->rels[c->rel_id];
 	const int i = c->id;
 	//std::map<int, DomType> mtype;
@@ -106,7 +117,6 @@ void HBuilder::EXTConToTab(const XCon * c) {
 	//中间变量元组
 	for (size_t j = 0; j < c->arity; ++j) {
 		const XVar* v = xm->vars[c->scope[j]];
-		//mtype[j] = domms[v->dom_id].type;
 		type[j] = domms[v->dom_id].type;
 		IsAllStd &= domms[v->dom_id].type;
 	}
@@ -160,10 +170,64 @@ void HBuilder::EXTConToTab(const XCon * c) {
 		delete[] tpl;
 	}
 
-	//若论域为非标准
-	if (IsAllStd == false) {
+	//非标准论域转标准论域
+	if (IsAllStd == false)
 		modifyTuple(hm->tabs[i], type);
+}
+
+void HBuilder::INTConToTab(XCon * c) {
+	XINTCon *xic = static_cast<XINTCon*>(c);
+	const XPre* p = xm->pres[xic->rel_id];
+	std::vector<std::vector<int>> ts;
+	std::vector<DomType> type(xic->arity);
+	bool IsAllStd = true;
+
+	//中间变量元组
+	for (size_t j = 0; j < xic->arity; ++j) {
+		const XVar* v = xm->vars[xic->scope[j]];
+		type[j] = domms[v->dom_id].type;
+		IsAllStd &= domms[v->dom_id].type;
 	}
+
+	int ps[20];
+	//std::vector<int> tp(xic->arity);
+	//int* tpl = new int[c->arity];
+	std::vector<int> tpl(c->arity);
+
+	int num_all_tpls = 1;
+	for (size_t j = 0; j < xic->arity; j++) {
+		const XDom *d = xm->doms[xm->vars[c->scope[j]]->dom_id];
+		num_all_tpls *= d->size;
+	}
+
+	const int num_pars = xic->num_paras;
+	for (size_t i = 0; i < num_all_tpls; i++) {
+		getIntTuple(i, tpl, c);
+
+		int par;
+		for (size_t j = 0; j < xic->num_paras; j++) {
+			int par_const = xic->paras[j];
+			if (getPara(par_const, &par)) {
+				for (size_t k = 0; k < xic->arity; k++)
+					if (par == xic->scope[k])
+						ps[j] = tpl[k];
+			}
+			else {
+				ps[j] = par_const;
+			}
+		}
+
+		const int result = calulate(&(p->prop_stack), ps);
+
+		if (result == 1)
+			ts.push_back(tpl);
+	}
+	hm->tabs[xic->id] = new HTab(xic->id, xic->arity, ts.size(), xic->scope);
+	makeHTab(hm->tabs[xic->id], ts);
+
+	//非标准论域转标准论域
+	if (IsAllStd == false)
+		modifyTuple(hm->tabs[xic->id], type);
 }
 
 void HBuilder::modifyTuple(HTab * t, std::vector<DomType>& type) {
@@ -181,13 +245,59 @@ void HBuilder::modifyTuple(HTab * t, std::vector<DomType>& type) {
 	}
 }
 
+void HBuilder::makeHTab(HTab * t, std::vector<std::vector<int>>& tuples) {
+	for (size_t i = 0; i < t->size; i++)
+		for (size_t j = 0; j < t->arity; j++)
+			t->tuples[i][j] = tuples[i][j];
+}
 
 
 
+bool HBuilder::getPara(int par_in, int * par) {
+	bool IsVarId;
 
+	if ((par_in - MAX_VALUE) >= 0) {
+		*par = par_in - MAX_VALUE;
+		IsVarId = true;
+	}
+	else {
+		*par = par_in;
+		IsVarId = false;
+	}
 
+	return IsVarId;
+}
 
+int HBuilder::calulate(const PStack * pss, int * params) {
+	int res_stack[10];
+	int res_top = -1;
+	int op;
+	int param;
 
+	for (u32 i = 0; i < pss->num_prs; ++i) {
+		op = pss->ps[i];
+
+		if (op > MAX_OPT) {
+			param = params[op];
+			res_stack[++res_top] = param;
+		}
+		else 
+			getResult((PredicateOperator)op, res_stack, &res_top);
+	}
+
+	return res_stack[0];
+}
+
+int HBuilder::getResult(PredicateOperator po, int * x, int * pars_top) {
+	int result = -1;
+	if (po == PO_ABS)
+		result = ops[po](x + *pars_top);
+	else
+		result = ops[po](x + (--(*pars_top)));
+
+	x[*pars_top] = result;
+	return result;
+}
 }
 
 

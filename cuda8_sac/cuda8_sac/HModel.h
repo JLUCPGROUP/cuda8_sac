@@ -9,6 +9,7 @@ enum DomType {
 };
 
 struct HProp {
+	int max_dom_size;
 	int vs_size;
 	int ts_size;
 };
@@ -31,6 +32,7 @@ public:
 	int** tuples;
 	int* scope;
 	HTab() {};
+	HTab(const int id, const int arity, const int size, int* scp);
 	HTab(const int id, const int arity, const int size, int** tps, int* scp);
 	~HTab();
 };

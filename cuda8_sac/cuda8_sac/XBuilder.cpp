@@ -223,6 +223,7 @@ void XBuilder::generateConstraints() {
 			sscanf_s(rel_id_str, "P%d", &rel_id);
 			char* pars_str = XMLString::transcode(node->getChildNodes()->item(1)->getFirstChild()->getNodeValue());
 			model_->cons[i] = new XINTCon(i, rel_id, arity, type, scope_str, pars_str);
+			XMLString::release(&pars_str);
 		}
 		else if (type == EXT) {
 			sscanf_s(rel_id_str, "R%d", &rel_id);
@@ -231,40 +232,6 @@ void XBuilder::generateConstraints() {
 		XMLString::release(&scope_str);
 		XMLString::release(&rel_id_str);
 	}
-
-	//modifyTuple();
 }
-
-//void XBuilder::modifyTuple() {
-//
-//	for (int i = 0; i < model_->feature.cs_size; ++i) {
-//		XCon* c = model_->cons[i];
-//		XRel* r = model_->rels[c->rel_id];
-//		for (int j = 0; j < c->arity; ++j) {
-//			XVar* v = model_->vars[c->scope[j]];
-//			if (xds[model_->vars[c->scope[j]]->dom_id].dt == disperse) {
-//				for (int k = 0; k < r->size; ++k) {
-//					const int s = r->tuples[k][j];
-//					const int res = xds[v->dom_id].m[s];
-//					r->tuples[k][j] = res;
-//				}
-//			}
-//		}
-//	}
-//
-//	for (int i = 0; i < model_->feature.cs_size; ++i) {
-//
-//		printf("%d : ", i);
-//		XCon* c = model_->cons[i];
-//		XRel* r = model_->rels[c->rel_id];
-//		for (int j = 0; j < r->size; ++j) {
-//			for (int k = 0; k < c->arity; ++k) {
-//				printf("%2d ", r->tuples[j][k]);
-//			}
-//			printf("|");
-//		}
-//		printf("\n");
-//	}
-//}
 
 }

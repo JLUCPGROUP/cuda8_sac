@@ -4,7 +4,7 @@
 #include <string>
 #include "XBuilder.h"
 #include "HBuilder.h"
-
+#include "cuda_sac.cuh"
 #undef DOMDocument
 
 using namespace std;
@@ -20,9 +20,17 @@ int main() {
 	builder.GenerateModelFromXml(xmodel);
 	HModel* hmodel = new HModel();
 	HBuilder hbuilder(xmodel, hmodel);
-	hbuilder.ShowHModel();
+	//hbuilder.ShowHModel();
+
+	float build_time = BuidBitModel32bit(hmodel);
+	float exe_time = SACGPU();
+
+	DelGPUModel();
+
 	delete hmodel;
 	delete xmodel;
+	printf("Build time = %f\n", build_time);
+	printf("Execution time = %f\n", exe_time);
 	printf("---end---\n");
 	return 0;
 }

@@ -14,6 +14,9 @@
     <Filter Include="HModel">
       <UniqueIdentifier>{c2b7c005-b222-4397-8b9a-9248dfba9e46}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CudaModel">
+      <UniqueIdentifier>{4d38c3ab-a37b-45e8-a952-0d79edf6ba47}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="queens-4_ext.xml">
@@ -32,6 +35,9 @@
       <Filter>Resources</Filter>
     </Xml>
     <Xml Include="BMPath.xml">
+      <Filter>Resources</Filter>
+    </Xml>
+    <Xml Include="queens-12.xml">
       <Filter>Resources</Filter>
     </Xml>
   </ItemGroup>
@@ -61,6 +67,9 @@
     </ClInclude>
     <ClInclude Include="HBuilder.h">
       <Filter>HModel</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_sac.cuh">
+      <Filter>CudaModel</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

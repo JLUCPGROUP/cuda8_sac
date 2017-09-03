@@ -15,6 +15,17 @@ HVar::~HVar() {
 	vals = nullptr;
 }
 
+HTab::HTab(const int id, const int arity, const int size, int * scp)
+	:id(id), arity(arity), size(size) {
+	scope = new int[arity];
+	for (size_t i = 0; i < arity; ++i)
+		scope[i] = scp[i];
+
+	tuples = new int*[size];
+	for (size_t i = 0; i < size; ++i)
+		tuples[i] = new int[arity]();
+}
+
 HTab::HTab(const int id, const int arity, const int size, int ** tps, int * scp)
 	: id(id), arity(arity), size(size) {
 	scope = new int[arity];
