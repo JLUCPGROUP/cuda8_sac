@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <string>
-#include "XBuilder.h"
-#include "HBuilder.h"
+#include "model/XBuilder.h"
+#include "model/HBuilder.h"
 #include "cuda_sac.cuh"
 #undef DOMDocument
 

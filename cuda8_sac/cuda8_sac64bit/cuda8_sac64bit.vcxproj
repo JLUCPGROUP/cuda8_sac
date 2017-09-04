@@ -28,12 +28,6 @@
   </ItemGroup>
   <ItemGroup>
     <Xml Include="BMPath.xml" />
-    <Xml Include="queens-12.xml" />
-    <Xml Include="queens-12_ext.xml" />
-    <Xml Include="queens-4_ext.xml" />
-    <Xml Include="XMLFile.xml" />
-    <Xml Include="XMLFileNeg.xml" />
-    <Xml Include="XMLFileNeg2.xml" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_sac.cuh" />

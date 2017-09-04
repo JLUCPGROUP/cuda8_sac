@@ -8,8 +8,8 @@
 #include <iostream>
 #include <math.h>
 
-#include "HModel.h"
-#include "XModel.h"
+#include "model/HModel.h"
+#include "model/XModel.h"
 #include "math_functions.hpp"
 #include "cuda_runtime_api.h"
 
@@ -208,7 +208,7 @@ __device__ __inline__ int pow2i(int e) {
 	return 1 << e;
 }
 
-__global__ void showConstraints(int3* scope, int len) {
+__global__ void showScope(int3* scope, int len) {
 	const int idx = blockDim.x * blockIdx.x + threadIdx.x;
 	if (idx < len) {
 		printf("i: %d, %d, %d\n", idx, scope[idx].x, scope[idx].y,
@@ -576,7 +576,7 @@ __global__ void UpdateSubDom(u32* bitDom, u32* bitSubDom, int* SVarPre, int* var
 	}
 }
 
-float BuidBitModel64bit(HModel * hm) {
+float BuidBitModel32bit(HModel * hm) {
 	//¼ÆÊ±º¯Êý
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);

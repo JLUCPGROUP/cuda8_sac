@@ -42,32 +42,6 @@
     </Xml>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="XBuilder.cpp">
-      <Filter>XModel</Filter>
-    </ClCompile>
-    <ClCompile Include="XModel.cpp">
-      <Filter>XModel</Filter>
-    </ClCompile>
-    <ClCompile Include="HModel.cpp">
-      <Filter>HModel</Filter>
-    </ClCompile>
-    <ClCompile Include="HBuilder.cpp">
-      <Filter>HModel</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="XBuilder.h">
-      <Filter>XModel</Filter>
-    </ClInclude>
-    <ClInclude Include="XModel.h">
-      <Filter>XModel</Filter>
-    </ClInclude>
-    <ClInclude Include="HModel.h">
-      <Filter>HModel</Filter>
-    </ClInclude>
-    <ClInclude Include="HBuilder.h">
-      <Filter>HModel</Filter>
-    </ClInclude>
     <ClInclude Include="cuda_sac.cuh">
       <Filter>CudaModel</Filter>
     </ClInclude>

@@ -9,24 +9,6 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="queens-4_ext.xml">
-      <Filter>Resources</Filter>
-    </Xml>
-    <Xml Include="queens-12.xml">
-      <Filter>Resources</Filter>
-    </Xml>
-    <Xml Include="queens-12_ext.xml">
-      <Filter>Resources</Filter>
-    </Xml>
-    <Xml Include="XMLFile.xml">
-      <Filter>Resources</Filter>
-    </Xml>
-    <Xml Include="XMLFileNeg.xml">
-      <Filter>Resources</Filter>
-    </Xml>
-    <Xml Include="XMLFileNeg2.xml">
-      <Filter>Resources</Filter>
-    </Xml>
     <Xml Include="BMPath.xml">
       <Filter>Resources</Filter>
     </Xml>

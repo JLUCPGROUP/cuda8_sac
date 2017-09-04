@@ -4,6 +4,7 @@
 #include <string>
 #include "model/XBuilder.h"
 #include "model/HBuilder.h"
+#include "cuda_sac.cuh"
 #undef DOMDocument
 
 using namespace std;
@@ -19,8 +20,9 @@ int main() {
 	builder.GenerateModelFromXml(xmodel);
 	HModel* hmodel = new HModel();
 	HBuilder hbuilder(xmodel, hmodel);
-	hbuilder.ShowHModel();
-
+	//hbuilder.ShowHModel();
+	BuidBitModel64bit(hmodel);
+	DelGPUModel();
 	delete hmodel;
 	delete xmodel;
 	printf("---end---\n");
