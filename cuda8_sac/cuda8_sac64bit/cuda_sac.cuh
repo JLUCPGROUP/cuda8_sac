@@ -15,9 +15,6 @@
 
 #define SHOWDATA
 
-struct {
-};
-
 namespace cudacp {
 
 // 定义无符号整型掩码
