@@ -576,7 +576,7 @@ __global__ void UpdateSubDom(u32* bitDom, u32* bitSubDom, int* SVarPre, int* var
 	}
 }
 
-float BuidBitModel32bit(HModel * hm) {
+float BuidBitModel64bit(HModel * hm) {
 	//¼ÆÊ±º¯Êý
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
