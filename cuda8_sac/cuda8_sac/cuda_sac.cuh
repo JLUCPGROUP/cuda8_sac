@@ -1217,7 +1217,6 @@ float SACGPU() {
 	//			if (h_SVarPre[idx] == 1)
 	//				printf("h_SVarPre[%2d, %2d, %2d], %d = %d\n", i, j, k, idx, h_SVarPre[idx]);
 	//		}
-
 	//	}
 	//}
 	//cudaMemcpy(h_SConEvt, d_SConEvt, H_CS_SIZE * H_VS_SIZE * H_MDS * sizeof(int3), cudaMemcpyDeviceToHost);

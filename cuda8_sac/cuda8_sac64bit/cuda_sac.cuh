@@ -13,7 +13,7 @@
 #include "math_functions.hpp"
 #include "cuda_runtime_api.h"
 
-#define SHOWDATA
+//#define SHOWDATA
 
 namespace cudacp {
 
@@ -218,7 +218,7 @@ __global__ void showScope(int3* scope, int len) {
 __global__ void showVariables(uint2* bitDom, int* MVarPre, int* var_size, int len) {
 	const int idx = blockDim.x * blockIdx.x + threadIdx.x;
 	if (idx < len) {
-		printf("v_id: %d, %8x %8x, %d, %d\n", idx, bitDom[idx].x, bitDom[idx].y, MVarPre[idx], __popc(bitDom[idx].x) + __popc(bitDom[idx].y));
+		printf("v_id: %2d, %8x %8x, %d, %d\n", idx, bitDom[idx].x, bitDom[idx].y, MVarPre[idx], __popc(bitDom[idx].x) + __popc(bitDom[idx].y));
 	}
 }
 
@@ -369,6 +369,9 @@ __global__ void CsCheckMain(int* mConEvt, int* mVarPre, int3* scope, uint2* bitD
 	const int bid = blockIdx.x;
 	//获得局部线程id
 	const int tid = threadIdx.x;
+	//线程束id
+	const int warp_id = tid / WARPSIZE;
+	const int lane_id = tid%WARPSIZE;
 	__shared__ int3 s_scp;
 	__shared__ uint4 s_bitDom;
 
@@ -386,65 +389,82 @@ __global__ void CsCheckMain(int* mConEvt, int* mVarPre, int3* scope, uint2* bitD
 	__syncthreads();
 
 	//支持矩阵拷贝到本地内存
-	if (tid < D_MDS)
+	if (tid < D_MDS) {
 		l_sum = bitSup[GetBitSupIdxDevice(s_scp.z, tid)];
+		//printf("%3d:%8x %8x %8x %8x\n", bid, l_sum.x, l_sum.y, l_sum.z, l_sum.w);
+	}
 	__syncthreads();
 
 	//归约
 	l_sum.x &= s_bitDom.z;
-	l_sum.y &= s_bitDom.w;
 	l_sum.z &= s_bitDom.x;
+	l_sum.y &= s_bitDom.w;
 	l_sum.w &= s_bitDom.y;
 
 	//投票并反转
-	l_res.x = __brev(__ballot(l_sum.x));
-	l_res.y = __brev(__ballot(l_sum.y));
-	l_res.z = __brev(__ballot(l_sum.z));
-	l_res.w = __brev(__ballot(l_sum.w));
+	//if (warp_id == 0) {
+
+	//}
+	//if (warp_id == 1) {
+
+	//}
+	l_res.x = __brev(__ballot(l_sum.x || l_sum.y));
+	l_res.y = __brev(__ballot(l_sum.x || l_sum.y));
+	l_res.z = __brev(__ballot(l_sum.z || l_sum.w));
+	l_res.w = __brev(__ballot(l_sum.z || l_sum.w));
 	__syncthreads();
 
-	if (tid == 0) {
-		//存入全局内存,并记录改变
-		//变量x[0]
+	//每个线程束的第一个线程
+
+	//if (warp_id == 0 && lane_id == 0) {
+	//	printf("bid:%d, warp_id:%d, lane_id:%d, les = %8x %8x\n", bid, warp_id, lane_id, l_res.x, l_res.z);
+	//}
+	//if (warp_id == 1 && lane_id == 0) {
+	//	printf("bid:%d, warp_id:%d, lane_id:%d, les = %8x %8x\n", bid, warp_id, lane_id, l_res.y, l_res.w);
+	//}
+
+	//第一个线程束的第一个线程 储存x[0] y[0]
+	if (warp_id == 0 && lane_id == 0) {
 		l_res.x &= s_bitDom.x;
 		if (s_bitDom.x != l_res.x) {
 			atomicAnd(&bitDom[s_scp.x].x, l_res.x);
 			mVarPre[s_scp.x] = 1;
 
-			if ((bitDom[s_scp.x].x | bitDom[s_scp.x].y) == 0)
+			if ((bitDom[s_scp.x].x || bitDom[s_scp.x].y) == 0)
 				mVarPre[s_scp.x] = INT_MIN;
 		}
 
-		//变量x[1]
-		l_res.y &= s_bitDom.y;
-		if (s_bitDom.y != l_res.y) {
-			atomicAnd(&bitDom[s_scp.x].y, l_res.y);
-			mVarPre[s_scp.x] = 1;
-
-			if ((bitDom[s_scp.x].x | bitDom[s_scp.x].y) == 0)
-				mVarPre[s_scp.x] = INT_MIN;
-		}
-
-		//变量y[0]
 		l_res.z &= s_bitDom.z;
 		if (s_bitDom.z != l_res.z) {
 			atomicAnd(&bitDom[s_scp.y].x, l_res.z);
 			mVarPre[s_scp.y] = 1;
 
-			if ((bitDom[s_scp.y].x | bitDom[s_scp.y].y) == 0)
+			if ((bitDom[s_scp.y].x || bitDom[s_scp.y].y) == 0)
 				mVarPre[s_scp.y] = INT_MIN;
 		}
+	}
 
-		//变量y[1]
+	//第二个线程束第一个线程 储存x[1] y[1]
+	if (warp_id == 1 && lane_id == 0) {
+		l_res.y &= s_bitDom.y;
+		if (s_bitDom.y != l_res.y) {
+			atomicAnd(&bitDom[s_scp.x].y, l_res.y);
+			mVarPre[s_scp.x] = 1;
+
+			if ((bitDom[s_scp.x].x || bitDom[s_scp.x].y) == 0)
+				mVarPre[s_scp.x] = INT_MIN;
+		}
+
 		l_res.w &= s_bitDom.w;
 		if (s_bitDom.w != l_res.w) {
 			atomicAnd(&bitDom[s_scp.y].y, l_res.w);
 			mVarPre[s_scp.y] = 1;
 
-			if ((bitDom[s_scp.y].x | bitDom[s_scp.y].y) == 0)
+			if ((bitDom[s_scp.y].x || bitDom[s_scp.y].y) == 0)
 				mVarPre[s_scp.y] = INT_MIN;
 		}
 	}
+	__syncthreads();
 }
 
 __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scope, u32* bitSubDom, u32* bitDom, uint2* bitSup) {
@@ -784,7 +804,7 @@ float BuidBitModel64bit(HModel * hm) {
 			printf("bitSup[%3d, x, %2d] = %8x %8x, bitSup[%3d, y, %2d] = %8x %8x\n", i, j, h_bitSup[idx].x, h_bitSup[idx].y, i, j, h_bitSup[idx].z, h_bitSup[idx].w);
 		}
 #endif // SHOWDATA
-	}
+		}
 
 	cudaMemcpy(d_bitSup, h_bitSup, H_CS_SIZE * H_MDS * sizeof(uint4), cudaMemcpyHostToDevice);
 	cudaDeviceSynchronize();
@@ -866,7 +886,7 @@ float BuidBitModel64bit(HModel * hm) {
 	cudaEventDestroy(stop);
 
 	return elapsedTime;
-}
+	}
 
 //__global__ void GenSubConPre(int* SVarPre, int* SCCBCount, int3* scp, int len) {
 //	//获取子问题，及
@@ -1196,18 +1216,29 @@ float SACGPU() {
 	//1.2. 流压缩取得约束队列
 	int mc_total = CompactConsQueMain(H_MCCBLOCK, H_MVCBLOCK, WORKSIZE, WORKSIZE_LARGE, d_MCCBCount, d_MCCBOffset);
 	//std::cout << "mc_total = " << mc_total << std::endl;
+	//ConstraintsCheckMain(mc_total);
 	do {
 		////1.3. 约束检查
 		ConstraintsCheckMain(mc_total);
 		////1.4. 流压缩取得约束队列
 		mc_total = CompactConsQueMain(H_MCCBLOCK, H_MVCBLOCK, WORKSIZE, WORKSIZE_LARGE, d_MCCBCount, d_MCCBOffset);
-		//std::cout << "mc_total = " << mc_total << std::endl;
-		//		showVariables<<<H_MVCount, WORKSIZE>>>(d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
+		std::cout << "mc_total = " << mc_total << std::endl;
+		showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
 	} while (mc_total > 0);
 	//showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
-
-
 	//////////////////////////////////////////////////////////////////////////
+
+	//1.5. 失败返回
+	if (mc_total == PROPFAILED) {
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+
+		cudaEventElapsedTime(&elapsedTime, start, stop);
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+		printf("Failed\n");
+		return elapsedTime;
+	}
 
 	////检查一下D_SVarPre
 	//cudaMemcpy(h_SVarPre, d_SVarPre, H_VS_SIZE * H_VS_SIZE * H_MDS * sizeof(int), cudaMemcpyDeviceToHost);
@@ -1287,4 +1318,4 @@ void DelGPUModel() {
 	cudaFree(d_SVar);
 	cudaFree(d_SVarPre);
 }
-}
+	}

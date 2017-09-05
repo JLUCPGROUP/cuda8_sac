@@ -22,6 +22,7 @@ int main() {
 	HBuilder hbuilder(xmodel, hmodel);
 	//hbuilder.ShowHModel();
 	BuidBitModel64bit(hmodel);
+	SACGPU();
 	DelGPUModel();
 	delete hmodel;
 	delete xmodel;
