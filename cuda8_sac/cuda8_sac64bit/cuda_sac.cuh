@@ -534,38 +534,6 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 	l_res.w = __brev(__ballot((l_sum.z || l_sum.w)));
 	__syncthreads();
 
-	//第0个线程束的第0个线程
-	if (tid == 0) {
-		//存入全局内存,并记录改变
-		l_res.x &= s_bitSubDom.x;
-		if (s_bitSubDom.x != l_res.x) {
-			atomicAnd(&bitSubDom[s_bitSubDomIdx.x], l_res.x);
-			sVarPre[s_sVarPreIdx.x] = 1;
-
-			if (bitSubDom[s_bitSubDomIdx.x] == 0) {
-				sVarPre[s_sVarPreIdx.x] = INT_MIN;
-				//printf("bid = %d, (%d, %d), c_id = %d should be delete!\n", bid, s_cevt.x, s_cevt.y, s_cevt.z);
-				DelMainValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
-			}
-		}
-	}
-	__syncthreads();
-
-	if (tid == 0) {
-		l_res.y &= s_bitSubDom.y;
-		if (s_bitSubDom.y != l_res.y) {
-			atomicAnd(&bitSubDom[s_bitSubDomIdx.y], l_res.y);
-			sVarPre[s_sVarPreIdx.y] = 1;
-
-			if (bitSubDom[s_bitSubDomIdx.y] == 0) {
-				sVarPre[s_sVarPreIdx.y] = INT_MIN;
-				//printf("(%d, %d), c_id = %d should be delete!\n", s_cevt.x, s_cevt.y, s_cevt.z);
-				DelValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
-			}
-		}
-	}
-	__syncthreads();
-
 	//第一个线程束的第一个线程 储存x[0] y[0]
 	if (warp_id == 0 && lane_id == 0) {
 		l_res.x &= s_bitSubDom.x;
