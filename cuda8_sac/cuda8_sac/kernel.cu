@@ -24,13 +24,14 @@ int main() {
 
 	float build_time = BuidBitModel32bit(hmodel);
 	float exe_time = SACGPU();
-
+	float back_time = CopyBitSubDom();
 	DelGPUModel();
 
 	delete hmodel;
 	delete xmodel;
 	printf("Build time = %f\n", build_time);
 	printf("Execution time = %f\n", exe_time);
+	printf("Copy back time = %f\n", back_time);
 	printf("---end---\n");
 	return 0;
 }

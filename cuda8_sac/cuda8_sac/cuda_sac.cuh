@@ -219,8 +219,7 @@ __global__ void showScope(int3* scope, int len) {
 __global__ void showVariables(u32* bitDom, int* MVarPre, int* var_size, int len) {
 	const int idx = blockDim.x * blockIdx.x + threadIdx.x;
 	if (idx < len) {
-		printf("i: %d, %x, %d, %d\n", idx, bitDom[idx], MVarPre[idx],
-			__popc(bitDom[idx]));
+		printf("i: %d, %x, %d, %d\n", idx, bitDom[idx], MVarPre[idx], __popc(bitDom[idx]));
 	}
 }
 
@@ -479,7 +478,8 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 
 			if (bitSubDom[s_bitSubDomIdx.y] == 0) {
 				sVarPre[s_sVarPreIdx.y] = INT_MIN;
-				//printf("(%d, %d), c_id = %d should be delete!\n", s_cevt.x, s_cevt.y, s_cevt.z);
+				printf("(%d, %d), c_id = %d should be delete!\n", s_cevt.x, s_cevt.y, s_cevt.z);
+				//DelValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
 				DelValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
 			}
 		}
@@ -1249,6 +1249,38 @@ float SACGPU() {
 	return elapsedTime;
 }
 
+float CopyBitSubDom() {
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+	float elapsedTime;
+
+	cudaMemcpy(h_bitDom, d_bitDom, H_VS_SIZE * sizeof(u32), cudaMemcpyDeviceToHost);
+
+	for (int i = 0; i < H_VS_SIZE; ++i) {
+		printf("v = %3d : %8x\n", i, h_bitDom[i]);
+	}
+
+	cudaMemcpy(h_bitSubDom, d_bitSubDom, H_VS_SIZE * H_MDS * H_VS_SIZE * sizeof(uint2), cudaMemcpyDeviceToHost);
+
+	//for (int i = 0; i < H_VS_SIZE; ++i) {
+	//	for (int j = 0; j < H_MDS; ++j) {
+	//		//Èô(i, j)×ÓÎÊÌâ
+	//		for (int k = 0; k < H_VS_SIZE; ++k) {
+	//			const int idx = GetBitSubDomIndexHost(i, j, k);
+	//			printf("(%d, %d, %d): %x, idx = %d\n", i, j, k, h_bitSubDom[idx], idx);
+	//		}
+	//	}
+	//}
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
+
+	return elapsedTime;
+}
 
 void DelGPUModel() {
 	free(h_scope);
