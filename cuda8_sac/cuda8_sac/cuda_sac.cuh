@@ -1533,41 +1533,6 @@ private:
 
 		//root结点不能弹出， 赋值栈不能弹空 长度最小为1
 		while (!I.empty()) {
-			//while (state == S_BRANCH) {
-			//	state = bds.push(bitSubDom[curr.v][curr.a]);
-			//	++num_nodes;
-			//	if (state == S_BRANCH) {
-			//		I.push_back(curr);
-			//		curr = selectChildValue(curr);
-			//	}
-			//}
-
-			//if (state == S_FAILED) {
-			//	curr = selectNextValue(curr);
-			//	state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
-			//}
-			//else if (state == S_BACKTRACK) {
-			//	curr = I.back();
-			//	I.pop_back();
-			//	if (curr != SearchNode::RootNode) {
-			//		bds.pop();
-			//		curr = selectNextValue(curr);
-			//		state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
-			//	}
-			//}
-			//else if (state == S_SOLVED) {
-			//	if (sn == SN_ONE) {
-			//		I.push_back(curr);
-			//		printAssigned();
-			//		return true;
-			//	}
-			//	else {
-			//		I.push_back(curr);
-			//		printAssigned();
-			//		state = S_BACKTRACK;
-			//	}
-			//}
-
 			switch (state) {
 			case cudacp::S_SOLVED:
 				if (sn == SN_ONE) {
