@@ -184,10 +184,16 @@ void XBuilder::generateRelations() {
 		num_tuples = XMLString::parseInt(node->getAttributes()->getNamedItem(XMLString::transcode("nbTuples"))->getTextContent());
 		//ÈôÊôÐÔsemantics == supportsÔòrelation_type = SURPPOT
 		sem = (strlen(semantics) == strlen("supports")) ? SEM_SUPPORT : SEM_CONFLICT;
-		char* innertext = XMLString::transcode(node->getFirstChild()->getNodeValue());
+		DOMNode *innertext_node = node->getFirstChild();
+		char* innertext;
+		if (num_tuples != 0)
+			innertext = XMLString::transcode(node->getFirstChild()->getNodeValue());
+		else
+			innertext = NULL;
 		model_->rels[i] = new XRel(i, arity, num_tuples, sem, innertext);
 		XMLString::release(&semantics);
-		XMLString::release(&innertext);
+		if (num_tuples != 0)
+			XMLString::release(&innertext);
 	}
 }
 

@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="HBuilder.h" />
     <ClInclude Include="HModel.h" />
+    <ClInclude Include="Timer.h" />
     <ClInclude Include="XBuilder.h" />
     <ClInclude Include="XModel.h" />
   </ItemGroup>

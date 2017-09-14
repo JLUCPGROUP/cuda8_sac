@@ -478,7 +478,7 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 
 			if (bitSubDom[s_bitSubDomIdx.y] == 0) {
 				sVarPre[s_sVarPreIdx.y] = INT_MIN;
-				printf("(%d, %d), c_id = %d should be delete!\n", s_cevt.x, s_cevt.y, s_cevt.z);
+				//printf("(%d, %d), c_id = %d should be delete!\n", s_cevt.x, s_cevt.y, s_cevt.z);
 				//DelValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
 				DelValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
 			}
@@ -1258,11 +1258,11 @@ float CopyBitSubDom() {
 
 	cudaMemcpy(h_bitDom, d_bitDom, H_VS_SIZE * sizeof(u32), cudaMemcpyDeviceToHost);
 
-	for (int i = 0; i < H_VS_SIZE; ++i) {
-		printf("v = %3d : %8x\n", i, h_bitDom[i]);
-	}
+	//for (int i = 0; i < H_VS_SIZE; ++i) {
+	//	printf("v = %3d : %8x\n", i, h_bitDom[i]);
+	//}
 
-	cudaMemcpy(h_bitSubDom, d_bitSubDom, H_VS_SIZE * H_MDS * H_VS_SIZE * sizeof(uint2), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_bitSubDom, d_bitSubDom, H_VS_SIZE * H_MDS * H_VS_SIZE * sizeof(u32), cudaMemcpyDeviceToHost);
 
 	//for (int i = 0; i < H_VS_SIZE; ++i) {
 	//	for (int j = 0; j < H_MDS; ++j) {
@@ -1313,4 +1313,369 @@ void DelGPUModel() {
 	cudaFree(d_SVar);
 	cudaFree(d_SVarPre);
 }
+
+enum SolutionNum {
+	SN_ONE,
+	SN_ALL
+};
+
+enum NodeType {
+	NT_ROOT,
+	NT_LEVEL1,
+	NT_DEADEND,
+	NT_LEAF,
+	NT_OUTLASTBRONODE,
+	NT_EXPLORE
+};
+
+enum SearchState {
+	S_SOLVED,
+	S_FAILED,
+	S_BRANCH,
+	S_BACKTRACK
+};
+
+class IntVal {
+public:
+	int v;
+	int a;
+	IntVal() {};
+	IntVal(const int v, const int a) :v(v), a(a) {};
+	IntVal(const uint2 v_a) :v(v_a.x), a(v_a.y) {};
+
+	const IntVal& operator=(const IntVal& rhs) {
+		v = rhs.v;
+		a = rhs.a;
+		return *this;
+	};
+
+	inline bool operator==(const IntVal& rhs) {
+		return (this == &rhs) || (v == rhs.v && a == rhs.a);
+	}
+
+	inline bool operator!=(const IntVal& rhs) {
+		return !((this == &rhs) || (v == rhs.v && a == rhs.a));
+	}
+
+	IntVal& next() {
+		return IntVal(v, a + 1);
+	}
+
+	IntVal& firstChild() {
+		return IntVal(v + 1, 0);
+	}
+
+	~IntVal() {};
+
+	friend std::ostream& operator<< (std::ostream &os, IntVal &v_val) {
+		os << "(" << v_val.v << ", " << v_val.a << ")";
+		return os;
+	};
+};
+
+namespace SearchNode {
+const IntVal RootNode = IntVal(-1, 0);
+const IntVal Deadend = IntVal(-2, -1);
+const IntVal NullNode = IntVal(-2, -2);
+const IntVal OutLastBroNode = IntVal(-2, -3);
+const IntVal OutLastNode = IntVal(-2, -4);
+};
+
+class BD_Stack {
+public:
+	BD_Stack() {};
+
+	void initial(HModel* m) {
+		m_ = m;
+		vs_size_ = m->property.vs_size;
+		b_.resize(vs_size_, UINT32_MAX);
+		s_.resize((vs_size_ + 2), std::vector<u32>(vs_size_, UINT_MAX));
+	}
+
+	//考虑一次实例化后赋两个值的巧合
+	SearchState push(std::vector<u32>& a) {
+		//++top_;
+		//所有变量都要做一次按位运算
+		for (size_t i = 0; i < vs_size_; i++) {
+			s_[top_ + 1][i] = s_[top_][i] & a[i];
+			//有变量域变空
+			if (s_[top_ + 1][i] == 0)
+				return S_FAILED;
+		}
+
+		++top_;
+		//所有变量域均不为空
+		if (top_ == vs_size_)
+			return S_SOLVED;
+		else
+			return S_BRANCH;
+	};
+
+	bool pop() {
+		if (top_ == 0)
+			return false;
+		else {
+			--top_;
+			return true;
+		}
+	};
+
+	~BD_Stack() {};
+private:
+	//top的最大值是vs_size+1;
+	int top_ = 0;
+	std::vector<std::vector<u32>> s_;
+	HModel* m_;
+	int vs_size_;
+	std::vector<u32> b_;
+};
+
+enum SearchMethod {
+	SM_DFS,
+	SM_BAB
+};
+
+class Solver {
+public:
+	std::vector<std::vector<std::vector<u32>>> bitSubDom;
+	std::vector<IntVal> I;
+	BD_Stack bds;
+	HModel* model;
+	int level = -1;
+	int num_solutions = 0;
+	int num_nodes = 0;
+
+	Solver(HModel* m) :
+		model(m) {
+		const int vs_size = model->property.vs_size;
+		const int mds = model->property.max_dom_size;
+		bitSubDom.resize(vs_size, std::vector<std::vector<u32>>(mds, std::vector<u32>(vs_size, 0)));
+		//拷贝数据结构
+		for (size_t i = 0; i < vs_size; i++) {
+			for (size_t j = 0; j < mds; j++) {
+				for (size_t k = 0; k < vs_size; k++) {
+					const int idx = GetBitSubDomIndexHost(i, j, k);
+					bitSubDom[i][j][k] = h_bitSubDom[idx];
+				}
+			}
+		}
+		bds.initial(m);
+		I.reserve(vs_size + 1);
+	}
+
+	float Solve(SearchMethod sm, SolutionNum sn) {
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		cudaEventRecord(start, 0);
+		float elapsedTime;
+		bool solved;
+		switch (sm) {
+		case cudacp::SM_DFS:
+			solved = preOrderSearch(sn);
+			break;
+		case cudacp::SM_BAB:
+			break;
+		default:
+			break;
+		}
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&elapsedTime, start, stop);
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+
+		if (solved)
+			printf("SAT\n");
+		else
+			printf("UNSAT\n");
+
+		return elapsedTime;
+	}
+
+	~Solver() {
+	}
+
+private:
+	bool hasChild(IntVal& v_a) {
+		if ((v_a.v + 1) < model->property.vs_size)
+			return true;
+		else
+			return false;
+	}
+
+	bool hasNext(IntVal& v_a) {
+		if ((v_a.a + 1) < model->vars[v_a.v]->size)
+			return true;
+		else
+			return false;
+	}
+
+	IntVal getChild(IntVal& v_a) {
+		if (hasChild(v_a))
+			return v_a.firstChild();
+		else
+			return SearchNode::OutLastBroNode;
+	}
+
+	IntVal getNext(IntVal& v_a) {
+		if (hasNext(v_a))
+			return v_a.next();
+		else return
+			SearchNode::OutLastBroNode;
+	}
+
+	bool preOrderSearch(SolutionNum sn) {
+		IntVal curr = SearchNode::RootNode;
+		SearchState state = S_BRANCH;
+		I.push_back(curr);
+		curr = selectChildValue(curr);
+
+		//root结点不能弹出， 赋值栈不能弹空 长度最小为1
+		while (!I.empty()) {
+			//while (state == S_BRANCH) {
+			//	state = bds.push(bitSubDom[curr.v][curr.a]);
+			//	++num_nodes;
+			//	if (state == S_BRANCH) {
+			//		I.push_back(curr);
+			//		curr = selectChildValue(curr);
+			//	}
+			//}
+
+			//if (state == S_FAILED) {
+			//	curr = selectNextValue(curr);
+			//	state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
+			//}
+			//else if (state == S_BACKTRACK) {
+			//	curr = I.back();
+			//	I.pop_back();
+			//	if (curr != SearchNode::RootNode) {
+			//		bds.pop();
+			//		curr = selectNextValue(curr);
+			//		state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
+			//	}
+			//}
+			//else if (state == S_SOLVED) {
+			//	if (sn == SN_ONE) {
+			//		I.push_back(curr);
+			//		printAssigned();
+			//		return true;
+			//	}
+			//	else {
+			//		I.push_back(curr);
+			//		printAssigned();
+			//		state = S_BACKTRACK;
+			//	}
+			//}
+
+			switch (state) {
+			case cudacp::S_SOLVED:
+				if (sn == SN_ONE) {
+					I.push_back(curr);
+					printAssigned();
+					return true;
+				}
+				else {
+					I.push_back(curr);
+					printAssigned();
+					state = S_BACKTRACK;
+				}
+				break;
+			case cudacp::S_FAILED:
+				curr = selectNextValue(curr);
+				state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
+				break;
+			case cudacp::S_BRANCH:
+				state = bds.push(bitSubDom[curr.v][curr.a]);
+				++num_nodes;
+				if (state == S_BRANCH) {
+					I.push_back(curr);
+					curr = selectChildValue(curr);
+				}
+				break;
+			case cudacp::S_BACKTRACK:
+				curr = I.back();
+				I.pop_back();
+				if (curr != SearchNode::RootNode) {
+					bds.pop();
+					curr = selectNextValue(curr);
+					state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		return false;
+	}
+
+	void printAssigned() {
+		for (auto v_a : I)
+			std::cout << v_a;
+		std::cout << std::endl;
+	}
+
+	NodeType checkNodeType(IntVal& v_a) {
+		IntVal back = I.back();
+		if (back == SearchNode::RootNode)
+			return NT_LEVEL1;
+		else if (v_a == SearchNode::OutLastBroNode)
+			return NT_OUTLASTBRONODE;
+		else if (bitSubDom[back.v][back.a][v_a.v] & bitSubDom[v_a.v][v_a.a][v_a.v] == 0)
+			return NT_DEADEND;
+		return NT_EXPLORE;
+	}
+
+	//新的赋值与现网络相容
+	IntVal selectChildValue(IntVal& v_a) {
+		IntVal val = getChild(v_a);
+		//while ((checkNodeType(val) != NT_EXPLORE)&&(checkNodeType(val) != NT_OUTLASTBRONODE)) {
+		//	val = getNext(val);
+		//	//if (val == SearchNode::OutLeafNode) {
+		//	//	return SearchNode::OutLeafNode;
+		//	//}
+		//}
+		while (checkNodeType(val) == NT_DEADEND)
+			val = getNext(val);
+		return val;
+	}
+
+	////新的赋值与现网络相容
+	//IntVal selectChildValue(IntVal& parent_val, IntVal& brother_val) {
+	//	IntVal val = getChild(v_a);
+	//	//while ((checkNodeType(val) != NT_EXPLORE)&&(checkNodeType(val) != NT_OUTLASTBRONODE)) {
+	//	//	val = getNext(val);
+	//	//	//if (val == SearchNode::OutLeafNode) {
+	//	//	//	return SearchNode::OutLeafNode;
+	//	//	//}
+	//	//}
+	//	while (checkNodeType(val) == NT_DEADEND)
+	//		val = getNext(val);
+	//	return val;
+	//}
+
+	IntVal selectNextValue(IntVal& v_a) {
+		IntVal val = getNext(v_a);
+		NodeType type = checkNodeType(val);
+
+		do {
+			switch (type) {
+			case NT_DEADEND:
+				val = getNext(val);
+				type = checkNodeType(val);
+				break;
+			case NT_OUTLASTBRONODE:
+				return SearchNode::OutLastBroNode;
+				break;
+			case NT_EXPLORE:
+				break;
+			default:
+				break;
+			}
+		} while (type != NT_EXPLORE);
+		return val;
+	}
+};
+
+
 }
