@@ -1537,12 +1537,13 @@ private:
 			case cudacp::S_SOLVED:
 				if (sn == SN_ONE) {
 					I.push_back(curr);
-					printAssigned();
+					//printAssigned();
 					return true;
 				}
 				else {
 					I.push_back(curr);
-					printAssigned();
+					++num_solutions;
+					//printAssigned();
 					state = S_BACKTRACK;
 				}
 				break;
@@ -1566,6 +1567,9 @@ private:
 					curr = selectNextValue(curr);
 					state = curr != SearchNode::OutLastBroNode ? S_BRANCH : S_BACKTRACK;
 				}
+				else {
+					return true;
+				}
 				break;
 			default:
 				break;
@@ -1584,7 +1588,7 @@ private:
 		IntVal back = I.back();
 		if (back == SearchNode::RootNode)
 			return NT_LEVEL1;
-		else if (v_a == SearchNode::OutLastBroNode)
+		if (v_a == SearchNode::OutLastBroNode)
 			return NT_OUTLASTBRONODE;
 		else if (bitSubDom[back.v][back.a][v_a.v] & bitSubDom[v_a.v][v_a.a][v_a.v] == 0)
 			return NT_DEADEND;
@@ -1594,30 +1598,10 @@ private:
 	//新的赋值与现网络相容
 	IntVal selectChildValue(IntVal& v_a) {
 		IntVal val = getChild(v_a);
-		//while ((checkNodeType(val) != NT_EXPLORE)&&(checkNodeType(val) != NT_OUTLASTBRONODE)) {
-		//	val = getNext(val);
-		//	//if (val == SearchNode::OutLeafNode) {
-		//	//	return SearchNode::OutLeafNode;
-		//	//}
-		//}
 		while (checkNodeType(val) == NT_DEADEND)
 			val = getNext(val);
 		return val;
 	}
-
-	////新的赋值与现网络相容
-	//IntVal selectChildValue(IntVal& parent_val, IntVal& brother_val) {
-	//	IntVal val = getChild(v_a);
-	//	//while ((checkNodeType(val) != NT_EXPLORE)&&(checkNodeType(val) != NT_OUTLASTBRONODE)) {
-	//	//	val = getNext(val);
-	//	//	//if (val == SearchNode::OutLeafNode) {
-	//	//	//	return SearchNode::OutLeafNode;
-	//	//	//}
-	//	//}
-	//	while (checkNodeType(val) == NT_DEADEND)
-	//		val = getNext(val);
-	//	return val;
-	//}
 
 	IntVal selectNextValue(IntVal& v_a) {
 		IntVal val = getNext(v_a);
@@ -1625,6 +1609,9 @@ private:
 
 		do {
 			switch (type) {
+			case NT_LEVEL1:
+				type = NT_EXPLORE;
+				break;
 			case NT_DEADEND:
 				val = getNext(val);
 				type = checkNodeType(val);

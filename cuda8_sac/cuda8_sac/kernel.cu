@@ -47,8 +47,9 @@ int main() {
 	//end = clock();
 	std::cout << "----------------solving---------------------" << std::endl;
 	//int64_t dur = t.elapsed();
-	printf("Solve time2 = %f\n", (t2 - t1)*1.0);
+	printf("Solve time = %f\n", (t2 - t1)*1.0);
 	printf("nodes = %d\n", s.num_nodes);
+	printf("|solutions| = %d\n", s.num_solutions);
 	DelGPUModel();
 	delete hmodel;
 	delete xmodel;

@@ -2,9 +2,9 @@
 <BenchMark>
   <BMFiles nbBMFiles = "1">
     <!--<BMFile id ="0">queens-4_ext.xml</BMFile>-->
-    <!--<BMFile id ="0">XMLFileNeg2.xml</BMFile>-->
+    <!--<BMFile id ="0">XMLFile.xml</BMFile>-->
     <!--<BMFile id ="0">queens-12.xml</BMFile>-->
-    <BMFile id ="0">queens-12_ext.xml</BMFile>
+    <!--<BMFile id ="0">queens-12_ext.xml</BMFile>-->
     <!--<BMFile id ="0">E:/Projects/benchmarks/frb30-15/frb30-15-1_ext.xml</BMFile>-->
     <!--<BMFile id ="0">E:/Projects/benchmarks/queenAttacking/queenAttacking-3.xml</BMFile>-->
     <!--<BMFile id ="0">E:/Projects/benchmarks/composed-25-1-40/composed-25-1-40-0_ext.xml</BMFile>-->
@@ -13,6 +13,6 @@
     <!--<BMFile id ="0">XMLFileNeg2.xml</BMFile>-->
     <!--<BMFile id ="0">XMLFileNeg.xml</BMFile>-->
     <!--<BMFile id ="0">XMLFile.xml</BMFile>-->
-    <!--<BMFile id ="0">E:/Projects/benchmarks/ModelRB/frb30-15/frb30-15/frb30-15-1_ext.xml</BMFile>-->
+    <BMFile id ="0">E:/Projects/benchmarks/frb30-15/frb30-15-5-mgd_ext.xml</BMFile>
   </BMFiles>
 </BenchMark>
