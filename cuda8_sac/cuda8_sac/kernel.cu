@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include <time.h>
+#include <sstream>
+#include <fstream>
 #include <windows.h>
 #include "model/XBuilder.h"
 #include "model/HBuilder.h"
@@ -18,42 +20,71 @@ const string X_PATH = "BMPath.xml";
 int main() {
 
 	DWORD t1, t2;
-	clock_t  begin, end;
-	time_t start, end2;
-	XBuilder path_builder(X_PATH, XRT_BM_PATH);
-	string bm_path = path_builder.GetBMFile();
-	cout << bm_path << endl;
-	XBuilder builder(bm_path, XRT_BM);
-	XModel* xmodel = new XModel();
-	builder.GenerateModelFromXml(xmodel);
-	HModel* hmodel = new HModel();
-	HBuilder hbuilder(xmodel, hmodel);
-	//hbuilder.ShowHModel();
-	std::cout << "----------------modeling--------------------" << std::endl;
-	float build_time = BuidBitModel32bit(hmodel);
-	printf("Build time = %f\n", build_time);
-	float exe_time = SACGPU();
-	printf("Execution time = %f\n", exe_time);
-	float back_time = CopyBitSubDom();
-	printf("Copy back time = %f\n", back_time);
-	std::cout << "----------------modeling--------------------" << std::endl;
-	Solver s(hmodel);
-	//Timer t;
-	//begin = clock();
-	std::cout << "----------------solving---------------------" << std::endl;
-	t1 = GetTickCount();
-	float sol_time = s.Solve(SM_DFS, SN_ONE);
-	t2 = GetTickCount();
-	//end = clock();
-	std::cout << "----------------solving---------------------" << std::endl;
-	//int64_t dur = t.elapsed();
-	printf("Solve time = %f\n", (t2 - t1)*1.0);
-	printf("nodes = %d\n", s.num_nodes);
-	printf("|solutions| = %d\n", s.num_solutions);
-	DelGPUModel();
-	delete hmodel;
-	delete xmodel;
-	printf("---end---\n");
+	//XBuilder path_builder(X_PATH, XRT_BM_PATH);
+	//string bm_path = path_builder.GetBMFile();
+	const string bmp_root = "E:/Projects/benchmarks/";
+	const string bmp_folder[4] = {
+		"tightness0.1/rand-2-40-8-753-100-",
+		"tightness0.2/rand-2-40-11-414-200-",
+		"tightness0.35/rand-2-40-16-250-350-",
+		"tightness0.5/rand-2-40-25-180-500-" };
+	const string bmp_ext = "_ext.xml";
+
+	for (size_t i = 3; i < 4; i++) {
+		ofstream lofi;
+		const string bm_res = bmp_root + "res/" + bmp_folder[i].substr(0, bmp_folder[0].find("/")) + ".txt";
+		lofi.open(bm_res, ios::out | ios::app);
+
+		cout << bm_res << endl;
+
+		if (!lofi.is_open())
+			return 0;
+
+		for (size_t j = 0; j < 1; j++) {
+			const string num = tostr<int>(j);
+			//const string bm_path = bmp_root + bmp_folder[i] + num + bmp_ext;
+			const string bm_path = "E:/Projects/benchmarks/tightness0.5/rand-2-40-25-180-500-2_ext.xml";
+			cout << bm_path << endl;
+			lofi << bm_path << endl;
+
+			XBuilder builder(bm_path, XRT_BM);
+			XModel* xmodel = new XModel();
+			builder.GenerateModelFromXml(xmodel);
+			HModel* hmodel = new HModel();
+			HBuilder hbuilder(xmodel, hmodel);
+
+			cout << "----------------modeling--------------------" << endl;
+			lofi << "----------------modeling--------------------" << endl;
+			float build_time = BuidBitModel32bit(hmodel);
+			cout << "Build time = " << build_time << endl;
+			lofi << "Build time = " << build_time << endl;
+
+			float exe_time = SACGPU();
+			cout << "Execution time = " << exe_time << endl;
+			lofi << "Execution time = " << exe_time << endl;
+
+			float back_time = CopyBitSubDom();
+			cout << "Copy back time = " << back_time << endl;
+			lofi << "Copy back time = " << back_time << endl;
+
+		/*	Solver s(hmodel);
+			cout << "----------------solving--------------------" << endl;
+			lofi << "----------------solving--------------------" << endl;
+			t1 = GetTickCount();
+			bool sat = s.Solve(SM_DFS, SN_ONE);
+			t2 = GetTickCount();
+			const string  slv_str = sat ? "SAT!!" : "UNSAT";
+			cout << slv_str << "|| Solve time = " << (t2 - t1) << "|| nodes = " << s.num_nodes << endl;
+			lofi << slv_str << "|| Solve time = " << (t2 - t1) << "|| nodes = " << s.num_nodes << endl;*/
+			DelGPUModel();
+			delete hmodel;
+			delete xmodel;
+			cout << "----------------sleeping--------------------" << endl;
+			lofi << "----------------sleeping--------------------" << endl;
+			Sleep(1000);
+		}
+		lofi.close();
+	}
 	return 0;
 }
 

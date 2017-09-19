@@ -12,6 +12,7 @@
 #include <string>
 #include <stdio.h>
 #include <vector>
+#include <sstream>
 #include "XModel.h"
 
 using namespace xercesc_3_1;
@@ -36,6 +37,21 @@ enum XmlReaderType {
 	XRT_BM_PATH,		///<banchmark path file
 	XRT_BM				///<banchmark
 };
+template<typename T>
+std::string tostr(T i)	// convert to string
+{
+	std::stringstream s;
+	s << i;
+	return s.str();
+}
+
+//std::string ftos(int i)	// convert int to string
+//{
+//	std::stringstream s;
+//	s << i;
+//	return s.str();
+//}
+
 
 class API_DECLSPEC XBuilder {
 public:

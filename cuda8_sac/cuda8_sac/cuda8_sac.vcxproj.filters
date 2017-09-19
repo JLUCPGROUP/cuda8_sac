@@ -2,6 +2,9 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="Solver.cu">
+      <Filter>Solver</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resources">
@@ -11,11 +14,11 @@
     <Filter Include="XModel">
       <UniqueIdentifier>{a80ea312-14f7-4adb-b3b8-400760bb83e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="HModel">
-      <UniqueIdentifier>{c2b7c005-b222-4397-8b9a-9248dfba9e46}</UniqueIdentifier>
-    </Filter>
     <Filter Include="CudaModel">
       <UniqueIdentifier>{4d38c3ab-a37b-45e8-a952-0d79edf6ba47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Solver">
+      <UniqueIdentifier>{c2b7c005-b222-4397-8b9a-9248dfba9e46}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -45,5 +48,16 @@
     <ClInclude Include="cuda_sac.cuh">
       <Filter>CudaModel</Filter>
     </ClInclude>
+    <ClInclude Include="CPUSolver.h">
+      <Filter>Solver</Filter>
+    </ClInclude>
+    <ClInclude Include="Solver.cuh">
+      <Filter>Solver</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CPUSolver.cpp">
+      <Filter>Solver</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -152,17 +152,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="HBuilder.h" />
-    <ClInclude Include="HModel.h" />
-    <ClInclude Include="Timer.h" />
-    <ClInclude Include="XBuilder.h" />
-    <ClInclude Include="XModel.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="HBuilder.cpp" />
     <ClCompile Include="HModel.cpp" />
     <ClCompile Include="XBuilder.cpp" />
     <ClCompile Include="XModel.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\model\HBuilder.h" />
+    <ClInclude Include="..\include\model\HModel.h" />
+    <ClInclude Include="..\include\model\Timer.h" />
+    <ClInclude Include="..\include\model\XBuilder.h" />
+    <ClInclude Include="..\include\model\XModel.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
