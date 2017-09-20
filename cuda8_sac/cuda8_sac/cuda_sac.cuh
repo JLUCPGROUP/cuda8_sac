@@ -1608,12 +1608,12 @@ public:
 			return S_FAILED;
 
 		//遍历该变量中所的有值
-		for (size_t i = 0; i < m_->vars[i]->size; ++i)
+		for (size_t i = 0; i < m_->vars[val.v]->size; ++i)
 			//若变量值已不存在，跳过
 			if (s_.back()[val.v] & U32_MASK1[i])
 				//生成subDom(x != a)
 				for (size_t j = 0; j < vs_size_; ++j)
-					r_[j] |= bsd_[val.v][val.a][j];
+					r_[j] |= bsd_[val.v][i][j];
 		//--------------------制作r_---------------------------
 		//所有变量都要做一次按位运算
 		for (size_t i = 0; i < vs_size_; i++) {
@@ -1676,10 +1676,13 @@ public:
 			int idx = 0;
 			int cnt;
 			for (size_t i = 0; i < vs_size_; ++i) {
-				cnt = _mm_popcnt_u32(s_.back()[i]);
-				if (cnt < smt) {
-					smt = cnt;
-					idx = i;
+				//该变量未被赋值，则统计论域大小
+				if (!I_->assiged(i)) {
+					cnt = _mm_popcnt_u32(s_.back()[i]);
+					if (cnt < smt) {
+						smt = cnt;
+						idx = i;
+					}
 				}
 			}
 			return idx;
@@ -1753,7 +1756,7 @@ public:
 
 			while (!(state == S_BRANCH) && !I.empty()) {
 				val = I.pop();
-				ns_.pop_back();
+				//ns_.pop_back();
 				val.flop();
 				state = ns_.push_back(val);
 			}
@@ -1766,12 +1769,5 @@ public:
 private:
 	HModel* m_;
 	NetworkStack ns_;
-
-
-	//IntVal selectIntVal() {
-	//	//??
-
-	//	return IntVal(I.size(), 0);
-	//};
 };
 }
