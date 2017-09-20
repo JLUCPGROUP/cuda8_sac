@@ -152,6 +152,25 @@ __inline__ __device__ __host__ int GetTopNum(int x, int y) {
 #define PROPFAILED -1
 #endif
 
+//32位:
+//将n写成二进制形式，然后相邻位相加，重复这个过程，直到只剩下一位。以123为例，二进制为1111101，如下图：
+inline int find32One(int n) {
+
+	const int MASK1 = 0x55555555;
+	const int MASK2 = 0x33333333;
+	const int MASK4 = 0x0f0f0f0f;
+	const int MASK8 = 0x00ff00ff;
+	const int MASK16 = 0x0000ffff;
+
+	n = (n & MASK1) + ((n >> 1) & MASK1);
+	n = (n & MASK2) + ((n >> 2) & MASK2);
+	n = (n & MASK4) + ((n >> 4) & MASK4);
+	n = (n & MASK8) + ((n >> 8) & MASK8);
+	n = (n & MASK16) + ((n >> 16) & MASK16);
+
+	return n;
+};
+
 float SACGPU();
 
 unsigned int nextPow2(unsigned int x) {
@@ -1350,11 +1369,52 @@ enum AssignedOperator {
 	AO_ASSIGN = 1
 };
 
-struct SearchStatistics {
-	int nodes = 0;
-	int times = 0;
+enum VarHeuristic {
+	VRH_LEX,
+	VRH_DOM,
+	VRH_VWDEG
 };
 
+
+enum ValHeuristic {
+	VLH_MIN,
+	VLH_VWDEG
+};
+
+struct SearchStatistics {
+	int num_sol = 0;
+	int nodes = 0;
+	int times = 0;
+	int ns_deep = 0;
+};
+
+inline u32 _32f1(u32 v) {
+	static const char msb_256_table[256] =
+	{
+		0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
+		4, 4, 4, 4, 4, 4, 4, 4,4, 4, 4, 4,4, 4, 4, 4,
+		5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+	};
+	int result = 0;
+
+	if (v > 0xFFFF) {
+		v >>= 16;
+		result += 16;
+	}
+	if (v > 0xFF) {
+		v >>= 8;
+		result += 8;
+	}
+
+	return 31 - (result + msb_256_table[v]);
+
+};
 //变量值取值或删值
 class IntVal {
 public:
@@ -1402,19 +1462,20 @@ public:
 	virtual void initial(HModel *m) {
 		m_ = m;
 		vals_.resize(m_->property.vs_size);
+		asnd_.resize(m->property.vs_size, false);
 	};
 
 	virtual ~AssignedStack() {};
 
 	virtual void push(IntVal& v_a) {
 		vals_[top_] = v_a;
-		assigned[top_] = true;
+		asnd_[v_a.v] = v_a.aop ? true : false;
 		++top_;
 	};
 
 	virtual IntVal pop() {
 		--top_;
-		assigned[top_] = false;
+		asnd_[vals_[top_].v] = false;
 		return vals_[top_];
 	};
 
@@ -1426,6 +1487,7 @@ public:
 	IntVal operator[](const int i) const { return vals_[i]; };
 	IntVal at(const int i) const { return vals_[i]; };
 	void clear() { top_ = 0; };
+	bool assiged(const int v) const { return asnd_[v]; };
 
 	friend std::ostream& operator<< (std::ostream &os, AssignedStack &I) {
 		for (int i = 0; i < I.size(); ++i)
@@ -1442,7 +1504,7 @@ public:
 protected:
 	HModel *m_;
 	std::vector<IntVal> vals_;
-	std::vector<bool> assigned;
+	std::vector<bool> asnd_;
 	int top_ = 0;
 	int size_;
 };
@@ -1483,8 +1545,9 @@ class NetworkStack {
 public:
 	NetworkStack() {};
 
-	void initial(HModel* m) {
+	void initial(HModel* m, AssignedStack* I) {
 		m_ = m;
+		I_ = I;
 		vs_size_ = m->property.vs_size;
 		mds_ = m_->property.max_dom_size;
 		bsd_.resize(vs_size_, std::vector<std::vector<u32>>(mds_, std::vector<u32>(vs_size_)));
@@ -1497,13 +1560,14 @@ public:
 
 		//初始化中间变量
 		r_.resize(vs_size_, 0);
-
+		for (size_t i = 0; i < vs_size_; i++) {
+			r_[i] = h_bitDom[i];
+		}
 		////初始化缓冲栈 缓冲栈并非循环队列
 		//ac_.initial(m);
 		//nc_.resize(MAXCACHESIZE, std::vector<u32>(vs_size_));
 
-		s_.resize(vs_size_, std::vector<u32>(vs_size_));
-		s_.clear();
+		s_.push_back(r_);
 
 	}
 
@@ -1514,7 +1578,7 @@ public:
 
 	SearchState reduce_dom(IntVal& val) {
 		//若当前网络已经删除将要赋值的val
-		if (s_.back()[val.v] & bsd_[val.v][val.a][val.v])
+		if (!(s_.back()[val.v] & bsd_[val.v][val.a][val.v]))
 			return S_FAILED;
 		//--------------------制作r_---------------------------
 		r_.assign(vs_size_, 0);
@@ -1589,6 +1653,52 @@ public:
 		//cache_top_ == 0;
 	};
 
+	std::vector<std::vector<std::vector<u32>>>& bitSubDom() {
+		return bsd_;
+	};
+
+	int size()const {
+		return s_.size();
+	}
+
+	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh = VLH_MIN) {
+		int var = select_var(vrh);
+		int val = select_val(var, vlh);
+		return IntVal(var, val);
+	};
+
+	int select_var(const VarHeuristic vrh) {
+
+		if (vrh == VRH_DOM) {
+			//std::vector<u32>::iterator smt = std::min_element(s_.back().begin(), s_.back().end());
+			//return smt - s_.back().begin();
+			int smt = INT_MAX;
+			int idx = 0;
+			int cnt;
+			for (size_t i = 0; i < vs_size_; ++i) {
+				cnt = _mm_popcnt_u32(s_.back()[i]);
+				if (cnt < smt) {
+					smt = cnt;
+					idx = i;
+				}
+			}
+			return idx;
+		}
+		else if (vrh == VRH_LEX) {
+			return I_->size();
+		}
+
+	};
+
+	int select_val(const int var, const ValHeuristic vlh) {
+		switch (vlh) {
+		case VLH_MIN:
+			return _32f1(s_.back()[var]);
+		default:
+			break;
+		}
+
+	};
 	~NetworkStack() {};
 private:
 	//top的最大值是vs_size+1;
@@ -1604,6 +1714,7 @@ private:
 	//bitSubDom网络
 	std::vector<std::vector<std::vector<u32>>> bsd_;
 
+	AssignedStack *I_;
 	////赋值缓冲栈
 	//CacheStack ac_;
 	////网络缓冲栈
@@ -1615,27 +1726,30 @@ class CPUSolver {
 public:
 	AssignedStack I;
 	CPUSolver(HModel *m) :m_(m) {
-		ns_.initial(m_);
+		I.initial(m_);
+		ns_.initial(m_, &I);
 	};
 	~CPUSolver() {};
 
 
-private:
-	HModel* m_;
-	NetworkStack ns_;
 
 	SearchStatistics MAC() {
 		bool finished = false;
 		IntVal val;
 		SearchState state;
 		SearchStatistics statistics;
+
 		while (!finished) {
-			val = select_value();
+			val = ns_.selectIntVal(VRH_DOM, VLH_MIN);
 			I.push(val);
 			state = ns_.push_back(val);
 
-			if ((state == S_BRANCH) && I.full())
+			if ((state == S_BRANCH) && I.full()) {
+				std::cout << I << std::endl;
+				statistics.ns_deep = ns_.size();
+				++statistics.num_sol;
 				return statistics;
+			}
 
 			while (!(state == S_BRANCH) && !I.empty()) {
 				val = I.pop();
@@ -1643,12 +1757,21 @@ private:
 				val.flop();
 				state = ns_.push_back(val);
 			}
+
+			if (!(state == S_BRANCH))
+				finished = true;
 		}
 	};
 
-	IntVal select_value() {
-		//??
-		return IntVal(I.size(), 0);
-	};
+private:
+	HModel* m_;
+	NetworkStack ns_;
+
+
+	//IntVal selectIntVal() {
+	//	//??
+
+	//	return IntVal(I.size(), 0);
+	//};
 };
 }
