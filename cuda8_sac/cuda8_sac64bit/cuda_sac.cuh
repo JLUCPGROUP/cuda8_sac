@@ -32,13 +32,13 @@ __constant__ __device__ u32 D_U32_MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFF
 0xFFFFFBFF, 0xFFFFFDFF, 0xFFFFFEFF, 0xFFFFFF7F, 0xFFFFFFBF, 0xFFFFFFDF,
 0xFFFFFFEF, 0xFFFFFFF7, 0xFFFFFFFB, 0xFFFFFFFD, 0xFFFFFFFE };
 
-const u32 U32_MASK1[32] = { 0x80000000, 0x40000000, 0x20000000, 0x10000000,
+const u32 MASK1[32] = { 0x80000000, 0x40000000, 0x20000000, 0x10000000,
 0x08000000, 0x04000000, 0x02000000, 0x01000000, 0x00800000, 0x00400000,
 0x00200000, 0x00100000, 0x00080000, 0x00040000, 0x00020000, 0x00010000,
 0x00008000, 0x00004000, 0x00002000, 0x00001000, 0x00000800, 0x00000400,
 0x00000200, 0x00000100, 0x00000080, 0x00000040, 0x00000020, 0x00000010,
 0x00000008, 0x00000004, 0x00000002, 0x00000001 };
-const u32 U32_MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
+const u32 MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
 0xF7FFFFFF, 0xFBFFFFFF, 0xFDFFFFFF, 0xFEFFFFFF, 0xFF7FFFFF, 0xFFBFFFFF,
 0xFFDFFFFF, 0xFFEFFFFF, 0xFFF7FFFF, 0xFFFBFFFF, 0xFFFDFFFF, 0xFFFEFFFF,
 0xFFFF7FFF, 0xFFFFBFFF, 0xFFFFDFFF, 0xFFFFEFFF, 0xFFFFF7FF, 0xFFFFFBFF,
@@ -789,10 +789,10 @@ float BuidBitModel64bit(HModel * hm) {
 			//此处
 			const int iji_idx = GetBitSubDomIndexHost(i, j, i);
 			if (j / U32_BIT == 0) {
-				h_bitSubDom[iji_idx].x = U32_MASK1[j];
+				h_bitSubDom[iji_idx].x = MASK1[j];
 			}
 			else {
-				h_bitSubDom[iji_idx].y = U32_MASK1[j%U32_BIT];
+				h_bitSubDom[iji_idx].y = MASK1[j%U32_BIT];
 			}
 		}
 	}
@@ -843,18 +843,18 @@ float BuidBitModel64bit(HModel * hm) {
 			const int2 int_idx = make_int2(t.x / U32_BIT, t.y / U32_BIT);
 			//修改bitSup(c,x,a)区域
 			if (int_idx.y == 0) {
-				h_bitSup[idx.x].x |= U32_MASK1[t.y & U32_MOD_MASK];
+				h_bitSup[idx.x].x |= MASK1[t.y & U32_MOD_MASK];
 			}
 			else if (int_idx.y == 1) {
-				h_bitSup[idx.x].y |= U32_MASK1[t.y & U32_MOD_MASK];
+				h_bitSup[idx.x].y |= MASK1[t.y & U32_MOD_MASK];
 			}
 
 			//修改bitSup(c,y,a)
 			if (int_idx.x == 0) {
-				h_bitSup[idx.y].z |= U32_MASK1[t.x&U32_MOD_MASK];
+				h_bitSup[idx.y].z |= MASK1[t.x&U32_MOD_MASK];
 			}
 			else if (int_idx.x == 1) {
-				h_bitSup[idx.y].w |= U32_MASK1[t.x&U32_MOD_MASK];
+				h_bitSup[idx.y].w |= MASK1[t.x&U32_MOD_MASK];
 			}
 
 			//h_bitSup[idx.x].x |= U32_MASK1[t.y & U32_MOD_MASK];
