@@ -1,12 +1,9 @@
+#pragma once
 #include "model/HBuilder.h"
 #include <deque>
 using namespace std;
 namespace cudacp {
-class IntVal;
-enum SolutionNum;
-enum SearchMethod;
-
-const u32 MASK1[32] = {
+const u32 M1[32] = {
 	0x80000000, 0x40000000, 0x20000000, 0x10000000,
 	0x08000000, 0x04000000, 0x02000000, 0x01000000,
 	0x00800000, 0x00400000, 0x00200000, 0x00100000,
@@ -17,7 +14,7 @@ const u32 MASK1[32] = {
 	0x00000008, 0x00000004, 0x00000002, 0x00000001
 };
 
-const u32 MASK0[32] = {
+const u32 M0[32] = {
 	0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
 	0xF7FFFFFF, 0xFBFFFFFF, 0xFDFFFFFF, 0xFEFFFFFF,
 	0xFF7FFFFF, 0xFFBFFFFF, 0xFFDFFFFF, 0xFFEFFFFF,
@@ -26,10 +23,6 @@ const u32 MASK0[32] = {
 	0xFFFFF7FF, 0xFFFFFBFF, 0xFFFFFDFF, 0xFFFFFEFF,
 	0xFFFFFF7F, 0xFFFFFFBF, 0xFFFFFFDF, 0xFFFFFFEF,
 	0xFFFFFFF7, 0xFFFFFFFB, 0xFFFFFFFD, 0xFFFFFFFE
-};
-
-namespace NodeType {
-const IntVal ROOTNODE = IntVal(-1, 0, true);
 };
 
 //解数量
@@ -116,155 +109,164 @@ public:
 private:
 	//HModel *m_;
 
-	inline int getBSDIdx(const int x, const int a, const int y) const;
+	int getBSDIdx(const int x, const int a, const int y) const;
 };
-
-//变量值取值或删值
-class IntVal {
-public:
-	int v;
-	int a;
-	bool aop = true;
-	IntVal() {};
-	IntVal(const int v, const int a, const bool aop = true) :v(v), a(a), aop(aop) {};
-	//IntVal(const uint2 v_a, const bool aop = true) :v(v_a.x), a(v_a.y), aop(aop) {};
-
-	const IntVal& operator=(const IntVal& rhs) {
-		v = rhs.v;
-		a = rhs.a;
-		aop = rhs.aop;
-		return *this;
-	};
-
-	//翻转赋值符号
-	void flop() {
-		aop = !aop;
-	};
-
-	inline bool operator==(const IntVal& rhs) {
-		return (this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop);
-	};
-
-	inline bool operator!=(const IntVal& rhs) {
-		return !((this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop));
-	};
-
-	friend std::ostream& operator<< (std::ostream &os, IntVal &v_val);
-	//{
-	//	const std::string s = (v_val.aop == AO_ASSIGN) ? " = " : " != ";
-	//	os << "(" << v_val.v << s << v_val.a << ")";
-	//	return os;
-	//};
-
-	~IntVal() {};
-};
-
-//赋值队列
-class AssignedStack {
-public:
-	AssignedStack() {};
-
-	void initial(HModel *m);
-	~AssignedStack() {};
-	void push(IntVal& v_a);
-	const IntVal pop();
-	IntVal top() const;
-	int size() const;
-	int capacity() const;
-	bool full() const;
-	bool empty() const;
-	IntVal operator[](const int i) const;
-	IntVal at(const int i) const;
-	void clear();
-	bool assiged(const int v) const;
-	friend std::ostream& operator<< (std::ostream &os, AssignedStack &I);
-	friend std::ostream& operator<< (std::ostream &os, AssignedStack* I);
-
-protected:
-	HModel *m_;
-	std::vector<IntVal> vals_;
-	std::vector<bool> asnd_;
-	int top_ = 0;
-	int max_size_;
-};
-
-class network {
-public:
-	network() {};
-	void initial(HModel *hm, u32* bitDom, u32* bitSubDom);
-	//考虑一次实例化后赋两个值的巧合
-	SearchState push_back(const IntVal& val);
-	SearchState reduce_dom(const IntVal& val);
-	SearchState remove_value(const IntVal& val);
-	vector<u32>& nt_back();
-	IntVal val_back();
-	void pop_back();
-	//bool empty();
-	int size() const;
-	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh = VLH_MIN);
-	int select_var(const VarHeuristic vrh);
-	int select_val(const int var, const ValHeuristic vlh);
-	void sychronize(IntVal& val);
-	~network() {};
-private:
-	HModel* m_;
-	//bit model
-	BitModel bm_;
-	//计算删值后网络bitDom的中间变量
-	vector<u32> r_;
-	//决策栈
-	deque<IntVal> D_;
-	//赋值栈
-	AssignedStack *I_;
-	//网络栈
-	deque<vector<u32>> s_;
-	int vs_size_;
-	int mds_;
-};
-
-class NetworkStack {
-public:
-	NetworkStack() {};
-	void initial(HModel *hm, u32* bitDom, u32* bitSubDom);
-	//考虑一次实例化后赋两个值的巧合
-	SearchState push_back(const IntVal& val);
-	SearchState reduce_dom(const IntVal& val);
-	SearchState remove_value(const IntVal& val);
-	vector<u32>& nt_back();
-	void pop_back();
-	//bool empty();
-	int size() const;
-	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh = VLH_MIN);
-	int select_var(const VarHeuristic vrh);
-	int select_val(const int var, const ValHeuristic vlh);
-	~NetworkStack() {};
-private:
-	HModel* m_;
-	//bit model
-	BitModel bm_;
-	//计算删值后网络bitDom的中间变量
-	vector<u32> r_;
-	////决策栈
-	//vector<IntVal> D_;
-	//赋值栈
-	AssignedStack *I_;
-	//网络栈
-	vector<vector<u32>> s_;
-	int vs_size_;
-	int mds_;
-	int top_ = 0;
-};
-
-class CPUSolver {
-public:
-	AssignedStack I;
-	CPUSolver(HModel *m, u32* bitDom, u32* bitSubDom);
-	~CPUSolver() {};
-
-	SearchStatistics MAC();
-
-private:
-	HModel* m_;
-	network n_;
-};
+//
+////变量值取值或删值
+//class IntVal {
+//public:
+//	int v;
+//	int a;
+//	bool aop = true;
+//	IntVal() {};
+//	IntVal(const int v, const int a, const bool aop = true) :v(v), a(a), aop(aop) {};
+//	//IntVal(const uint2 v_a, const bool aop = true) :v(v_a.x), a(v_a.y), aop(aop) {};
+//
+//	const IntVal& operator=(const IntVal& rhs) {
+//		v = rhs.v;
+//		a = rhs.a;
+//		aop = rhs.aop;
+//		return *this;
+//	};
+//
+//	//翻转赋值符号
+//	void flop() {
+//		aop = !aop;
+//	};
+//
+//	inline bool operator==(const IntVal& rhs) {
+//		return (this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop);
+//	};
+//
+//	inline bool operator!=(const IntVal& rhs) {
+//		return !((this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop));
+//	};
+//
+//	friend std::ostream& operator<< (std::ostream &os, IntVal &v_val);
+//	//{
+//	//	const std::string s = (v_val.aop == AO_ASSIGN) ? " = " : " != ";
+//	//	os << "(" << v_val.v << s << v_val.a << ")";
+//	//	return os;
+//	//};
+//
+//	~IntVal() {};
+//};
+//
+//namespace SearchNode {
+//const IntVal RootNode = IntVal(-1, 0);
+//const IntVal Deadend = IntVal(-2, -1);
+//const IntVal NullNode = IntVal(-2, -2);
+//const IntVal OutLastBroNode = IntVal(-2, -3);
+//const IntVal OutLastNode = IntVal(-2, -4);
+//};
+//
+////赋值队列
+//class AssignedStack {
+//public:
+//	AssignedStack() {};
+//
+//	void initial(HModel *m);
+//	~AssignedStack() {};
+//	void push(IntVal& v_a);
+//	const IntVal pop();
+//	IntVal top() const;
+//	int size() const;
+//	int capacity() const;
+//	bool full() const;
+//	bool empty() const;
+//	IntVal operator[](const int i) const;
+//	IntVal at(const int i) const;
+//	void clear();
+//	bool assiged(const int v) const;
+//	friend std::ostream& operator<< (std::ostream &os, AssignedStack &I);
+//	friend std::ostream& operator<< (std::ostream &os, AssignedStack* I);
+//
+//protected:
+//	HModel *m_;
+//	std::vector<IntVal> vals_;
+//	std::vector<bool> asnd_;
+//	int top_ = 0;
+//	int max_size_;
+//};
+//
+//class network {
+//public:
+//	network() {};
+//	void initial(HModel *hm, u32* bitDom, u32* bitSubDom);
+//	//考虑一次实例化后赋两个值的巧合
+//	SearchState push_back(const IntVal& val);
+//	SearchState reduce_dom(const IntVal& val);
+//	SearchState remove_value(const IntVal& val);
+//	vector<u32>& nt_back();
+//	IntVal val_back();
+//	void pop_back();
+//	//bool empty();
+//	int size() const;
+//	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh);
+//	int select_var(const VarHeuristic vrh);
+//	int select_val(const int var, const ValHeuristic vlh);
+//	void sychronize(IntVal& val);
+//	~network() {};
+//private:
+//	HModel* m_;
+//	//bit model
+//	BitModel bm_;
+//	//计算删值后网络bitDom的中间变量
+//	vector<u32> r_;
+//	//决策栈
+//	deque<IntVal> D_;
+//	//赋值栈
+//	AssignedStack *I_;
+//	//网络栈
+//	deque<vector<u32>> s_;
+//	int vs_size_;
+//	int mds_;
+//};
+//
+//class NetworkStack {
+//public:
+//	NetworkStack() {};
+//	void initial(HModel *hm, u32* bitDom, u32* bitSubDom);
+//	//考虑一次实例化后赋两个值的巧合
+//	SearchState push_back(const IntVal& val);
+//	SearchState reduce_dom(const IntVal& val);
+//	SearchState remove_value(const IntVal& val);
+//	vector<u32>& nt_back();
+//	void pop_back();
+//	//bool empty();
+//	int size() const;
+//	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh);
+//	int select_var(const VarHeuristic vrh);
+//	int select_val(const int var, const ValHeuristic vlh);
+//	void restore(const int p);
+//	~NetworkStack() {};
+//private:
+//	HModel* m_;
+//	//bit model
+//	BitModel bm_;
+//	//计算删值后网络bitDom的中间变量
+//	vector<u32> r_;
+//	////决策栈
+//	//vector<IntVal> D_;
+//	//赋值栈
+//	AssignedStack *I_;
+//	//网络栈
+//	vector<vector<u32>> s_;
+//	int vs_size_;
+//	int mds_;
+//	int top_ = 0;
+//};
+//
+//class CPUSolver {
+//public:
+//	AssignedStack I;
+//	CPUSolver(HModel *m, u32* bitDom, u32* bitSubDom);
+//	~CPUSolver() {};
+//
+//	SearchStatistics MAC();
+//
+//private:
+//	HModel* m_;
+//	network n_;
+//};
 }
