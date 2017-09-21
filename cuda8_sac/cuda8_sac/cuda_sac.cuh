@@ -32,13 +32,13 @@ __constant__ __device__ u32 D_U32_MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFF
 0xFFFFFBFF, 0xFFFFFDFF, 0xFFFFFEFF, 0xFFFFFF7F, 0xFFFFFFBF, 0xFFFFFFDF,
 0xFFFFFFEF, 0xFFFFFFF7, 0xFFFFFFFB, 0xFFFFFFFD, 0xFFFFFFFE };
 
-const u32 MASK1[32] = { 0x80000000, 0x40000000, 0x20000000, 0x10000000,
+const u32 U32_MASK1[32] = { 0x80000000, 0x40000000, 0x20000000, 0x10000000,
 0x08000000, 0x04000000, 0x02000000, 0x01000000, 0x00800000, 0x00400000,
 0x00200000, 0x00100000, 0x00080000, 0x00040000, 0x00020000, 0x00010000,
 0x00008000, 0x00004000, 0x00002000, 0x00001000, 0x00000800, 0x00000400,
 0x00000200, 0x00000100, 0x00000080, 0x00000040, 0x00000020, 0x00000010,
 0x00000008, 0x00000004, 0x00000002, 0x00000001 };
-const u32 MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
+const u32 U32_MASK0[32] = { 0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
 0xF7FFFFFF, 0xFBFFFFFF, 0xFDFFFFFF, 0xFEFFFFFF, 0xFF7FFFFF, 0xFFBFFFFF,
 0xFFDFFFFF, 0xFFEFFFFF, 0xFFF7FFFF, 0xFFFBFFFF, 0xFFFDFFFF, 0xFFFEFFFF,
 0xFFFF7FFF, 0xFFFFBFFF, 0xFFFFDFFF, 0xFFFFEFFF, 0xFFFFF7FF, 0xFFFFFBFF,
@@ -687,7 +687,7 @@ float BuidBitModel32bit(HModel * hm) {
 			//最后将(i, j)的bitDom 改掉
 			//获取i, j, i的起始地址，并修改
 			const int iji_idx = GetBitSubDomIndexHost(i, j, i);
-			h_bitSubDom[iji_idx] = MASK1[j];
+			h_bitSubDom[iji_idx] = U32_MASK1[j];
 		}
 	}
 
@@ -734,8 +734,8 @@ float BuidBitModel32bit(HModel * hm) {
 		for (int j = 0; j < c->size; ++j) {
 			const int2 t = make_int2(c->tuples[j][0], c->tuples[j][1]);
 			const int2 idx = GetBitSupIndexByTupleHost(c->id, t);
-			h_bitSup[idx.x].x |= MASK1[t.y & U32_MOD_MASK];
-			h_bitSup[idx.y].y |= MASK1[t.x & U32_MOD_MASK];
+			h_bitSup[idx.x].x |= U32_MASK1[t.y & U32_MOD_MASK];
+			h_bitSup[idx.y].y |= U32_MASK1[t.x & U32_MOD_MASK];
 		}
 #ifdef SHOWDATA
 		for (int j = 0; j < H_MDS; ++j) {
@@ -1336,312 +1336,438 @@ void DelGPUModel() {
 	cudaFree(d_SVarPre);
 }
 
-//
-////变量值取值或删值
-//class IntVal {
-//public:
-//	int v;
-//	int a;
-//	bool aop = true;
-//	IntVal() {};
-//	IntVal(const int v, const int a, const bool aop = true) :v(v), a(a), aop(aop) {};
-//	IntVal(const uint2 v_a, const bool aop = true) :v(v_a.x), a(v_a.y), aop(aop) {};
-//
-//	const IntVal& operator=(const IntVal& rhs) {
-//		v = rhs.v;
-//		a = rhs.a;
-//		aop = rhs.aop;
-//		return *this;
-//	};
-//
-//	//翻转赋值符号
-//	void flop() {
-//		aop = !aop;
-//	};
-//
-//	inline bool operator==(const IntVal& rhs) {
-//		return (this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop);
-//	};
-//
-//	inline bool operator!=(const IntVal& rhs) {
-//		return !((this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop));
-//	};
-//
-//	friend std::ostream& operator<< (std::ostream &os, IntVal &v_val) {
-//		const std::string s = (v_val.aop == AO_ASSIGN) ? " = " : " != ";
-//		os << "(" << v_val.v << s << v_val.a << ")";
-//		return os;
-//	};
-//
-//	~IntVal() {};
-//};
-//
-//////赋值队列
-////class AssignedStack {
-////public:
-////	AssignedStack() {};
-////
-////	virtual void initial(HModel *m) {
-////		m_ = m;
-////		vals_.resize(m_->property.vs_size);
-////		asnd_.resize(m->property.vs_size, false);
-////	};
-////
-////	virtual ~AssignedStack() {};
-////
-////	virtual void push(IntVal& v_a) {
-////		vals_[top_] = v_a;
-////		asnd_[v_a.v] = v_a.aop ? true : false;
-////		++top_;
-////	};
-////
-////	virtual IntVal pop() {
-////		--top_;
-////		asnd_[vals_[top_].v] = false;
-////		return vals_[top_];
-////	};
-////
-////	IntVal top() const { return vals_[top_]; };
-////	int size() const { return top_; }
-////	int capacity() const { return max_size_; }
-////	bool full() const { return top_ == max_size_; }
-////	bool empty() const { return top_ == 0; }
-////	IntVal operator[](const int i) const { return vals_[i]; };
-////	IntVal at(const int i) const { return vals_[i]; };
-////	void clear() { top_ = 0; };
-////	bool assiged(const int v) const { return asnd_[v]; };
-////
-////	friend std::ostream& operator<< (std::ostream &os, AssignedStack &I) {
-////		for (int i = 0; i < I.size(); ++i)
-////			os << "(" << I[i] << ")\t";
-////		return os;
-////	};
-////
-////	friend std::ostream& operator<< (std::ostream &os, AssignedStack* I) {
-////		for (int i = 0; i < I->size(); ++i)
-////			os << "(" << I->at(i) << ")\t";
-////		return os;
-////	};
-////
-////protected:
-////	HModel *m_;
-////	std::vector<IntVal> vals_;
-////	std::vector<bool> asnd_;
-////	int top_ = 0;
-////	int max_size_;
-////};
-//
-//
-//class CacheStack :AssignedStack {
-//public:
-//	CacheStack() {};
-//
-//	virtual void initial(HModel* m, const int stack_size = MAXCACHESIZE) {
-//		m_ = m;
-//		vals_.resize(stack_size);
-//		max_size_ = stack_size;
-//	};
-//
-//	virtual void push(IntVal& v_a) {
-//		vals_[top_] = v_a;
-//		++top_;
-//	};
-//
-//	virtual IntVal pop() {
-//		--top_;
-//		return vals_[top_];
-//	};
-//
-//	virtual void clear() {
-//		top_ = 0;
-//	}
-//
-//	virtual ~CacheStack() {};
-//private:
-//	int cache_top_ = 0;
-//
-//};
-//
-//
-////搜索8层记录一次
-//class NetworkStack {
-//public:
-//	NetworkStack() {};
-//
-//	void initial(HModel* m, AssignedStack* I) {
-//		m_ = m;
-//		I_ = I;
-//		vs_size_ = m->property.vs_size;
-//		mds_ = m_->property.max_dom_size;
-//		bsd_.resize(vs_size_, std::vector<std::vector<u32>>(mds_, std::vector<u32>(vs_size_)));
-//
-//		//拷贝数据结构
-//		for (size_t i = 0; i < vs_size_; i++)
-//			for (size_t j = 0; j < mds_; j++)
-//				for (size_t k = 0; k < vs_size_; k++)
-//					bsd_[i][j][k] = h_bitSubDom[GetBitSubDomIndexHost(i, j, k)];
-//
-//		//初始化中间变量
-//		r_.resize(vs_size_, 0);
-//		for (size_t i = 0; i < vs_size_; i++) {
-//			r_[i] = h_bitDom[i];
-//		}
-//		////初始化缓冲栈 缓冲栈并非循环队列
-//		//ac_.initial(m);
-//		//nc_.resize(MAXCACHESIZE, std::vector<u32>(vs_size_));
-//
-//		s_.push_back(r_);
-//
-//	}
-//
-//	//考虑一次实例化后赋两个值的巧合
-//	SearchState push_back(IntVal& val) {
-//		return val.aop ? reduce_dom(val) : remove_value(val);
-//	};
-//
-//	SearchState reduce_dom(IntVal& val) {
-//		//若当前网络已经删除将要赋值的val
-//		if (!(s_.back()[val.v] & bsd_[val.v][val.a][val.v]))
-//			return S_FAILED;
-//		//--------------------制作r_---------------------------
-//		r_.assign(vs_size_, 0);
-//		//所有变量都要做一次按位运算
-//		for (size_t i = 0; i < vs_size_; i++) {
-//			r_[i] = s_.back()[i] & bsd_[val.v][val.a][i];
-//			//有变量域变空
-//			if (r_[i] == 0)
-//				return S_FAILED;
-//		}
-//		//--------------------制作r_---------------------------
-//
-//		//将AC的r_加入队列中
-//		//AC成功
-//		s_.push_back(r_);
-//
-//		return S_BRANCH;
-//	}
-//
-//	//从网络中删除val
-//	SearchState remove_value(IntVal& val) {
-//		//--------------------制作r_---------------------------
-//		r_.assign(vs_size_, 0);
-//		//先删该点val
-//		s_.back()[val.v] &= U32_MASK0[val.a];
-//		if (s_.back()[val.v] == 0)
-//			return S_FAILED;
-//
-//		//遍历该变量中所的有值
-//		for (size_t i = 0; i < m_->vars[i]->size; ++i)
-//			//若变量值已不存在，跳过
-//			if (s_.back()[val.v] & U32_MASK1[i])
-//				//生成subDom(x != a)
-//				for (size_t j = 0; j < vs_size_; ++j)
-//					r_[j] |= bsd_[val.v][val.a][j];
-//		//--------------------制作r_---------------------------
-//		//所有变量都要做一次按位运算
-//		for (size_t i = 0; i < vs_size_; i++) {
-//			r_[i] &= s_.back()[i];
-//			//有变量域变空
-//			if (r_[i] == 0)
-//				return S_FAILED;
-//		}
-//		//--------------------制作r_---------------------------
-//
-//		//将AC的r_加入队列中
-//		//AC成功
-//		s_.push_back(r_);
-//
-//		return S_BRANCH;
-//	};
-//
-//	std::vector<u32>& back() {
-//		return s_.back();
-//	};
-//
-//	void pop_back() {
-//		s_.pop_back();
-//	}
-//
-//	bool empty() {
-//		return s_.empty();
-//	}
-//
-//	//void cache_push(Int) {
-//
-//	//};
-//
-//	void recompute() {};
-//
-//	void clear_cache() {
-//		//cache_top_ == 0;
-//	};
-//
-//	std::vector<std::vector<std::vector<u32>>>& bitSubDom() {
-//		return bsd_;
-//	};
-//
-//	int size()const {
-//		return s_.size();
-//	}
-//
-//	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh = VLH_MIN) {
-//		int var = select_var(vrh);
-//		int val = select_val(var, vlh);
-//		return IntVal(var, val);
-//	};
-//
-//	int select_var(const VarHeuristic vrh) {
-//
-//		if (vrh == VRH_DOM) {
-//			int smt = INT_MAX;
-//			int idx = 0;
-//			int cnt;
-//			for (size_t i = 0; i < vs_size_; ++i) {
-//				cnt = _mm_popcnt_u32(s_.back()[i]);
-//				if (cnt < smt) {
-//					smt = cnt;
-//					idx = i;
-//				}
-//			}
-//			return idx;
-//		}
-//		else if (vrh == VRH_LEX) {
-//			return I_->size();
-//		}
-//
-//	};
-//
-//	int select_val(const int var, const ValHeuristic vlh) {
-//		switch (vlh) {
-//		case VLH_MIN:
-//			return _32f1(s_.back()[var]);
-//		default:
-//			break;
-//		}
-//
-//	};
-//	~NetworkStack() {};
-//private:
-//	//top的最大值是vs_size+1;
-//	//int top_ = 0;
-//	////主网络栈8层一个记录
-//	std::deque<std::vector<u32>> s_;
-//	//缓冲栈只记录最新的8层网络
-//	HModel* m_;
-//	int vs_size_;
-//	int mds_;
-//	//计算删值后网络bitDom的中间变量
-//	std::vector<u32> r_;
-//	//bitSubDom网络
-//	std::vector<std::vector<std::vector<u32>>> bsd_;
-//	AssignedStack D_;
-//	AssignedStack *I_;
-//	////赋值缓冲栈
-//	//CacheStack ac_;
-//	////网络缓冲栈
-//	//int cache_top_ = 0;
-//	//std::vector<std::vector<u32>> nc_;
-//};
-//
+enum SolutionNum {
+	SN_ONE,
+	SN_ALL
+};
 
+enum SearchMethod {
+	SM_MAC,
+	SM_DFS,
+	SM_BAB,
+	SM_BIDFS
+};
+
+//enum NodeType {
+//	NT_ROOT,
+//	NT_LEVEL1,
+//	NT_DEADEND,
+//	NT_LEAF,
+//	NT_OUTLASTBRONODE,
+//	NT_EXPLORE
+//};
+
+enum SearchState {
+	S_BRANCH
+	, S_FAILED
+	, S_SOLVED
+	//,	S_BACKTRACK
+};
+
+enum AssignedOperator {
+	AO_EXCLUDE = 0,
+	AO_ASSIGN = 1
+};
+
+enum VarHeuristic {
+	VRH_LEX,
+	VRH_DOM,
+	VRH_VWDEG
+};
+
+
+enum ValHeuristic {
+	VLH_MIN,
+	VLH_VWDEG
+};
+
+struct SearchStatistics {
+	int num_sol = 0;
+	int nodes = 0;
+	int times = 0;
+	int ns_deep = 0;
+};
+
+inline u32 _32f1(u32 v) {
+	static const char msb_256_table[256] =
+	{
+		0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
+		4, 4, 4, 4, 4, 4, 4, 4,4, 4, 4, 4,4, 4, 4, 4,
+		5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+		6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+		7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+	};
+	int result = 0;
+
+	if (v > 0xFFFF) {
+		v >>= 16;
+		result += 16;
+	}
+	if (v > 0xFF) {
+		v >>= 8;
+		result += 8;
+	}
+
+	return 31 - (result + msb_256_table[v]);
+
+};
+//变量值取值或删值
+class IntVal {
+public:
+	int v;
+	int a;
+	bool aop = true;
+	IntVal() {};
+	IntVal(const int v, const int a, const bool aop = true) :v(v), a(a), aop(aop) {};
+	IntVal(const uint2 v_a, const bool aop = true) :v(v_a.x), a(v_a.y), aop(aop) {};
+
+	const IntVal& operator=(const IntVal& rhs) {
+		v = rhs.v;
+		a = rhs.a;
+		aop = rhs.aop;
+		return *this;
+	};
+
+	//翻转赋值符号
+	void flop() {
+		aop = !aop;
+	};
+
+	inline bool operator==(const IntVal& rhs) {
+		return (this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop);
+	};
+
+	inline bool operator!=(const IntVal& rhs) {
+		return !((this == &rhs) || (v == rhs.v && a == rhs.a && aop == rhs.aop));
+	};
+
+	friend std::ostream& operator<< (std::ostream &os, IntVal &v_val) {
+		const std::string s = (v_val.aop == AO_ASSIGN) ? " = " : " != ";
+		os << "(" << v_val.v << s << v_val.a << ")";
+		return os;
+	};
+
+	~IntVal() {};
+};
+
+//赋值队列
+class AssignedStack {
+public:
+	AssignedStack() {};
+
+	virtual void initial(HModel *m) {
+		m_ = m;
+		vals_.resize(m_->property.vs_size);
+		asnd_.resize(m->property.vs_size, false);
+	};
+
+	virtual ~AssignedStack() {};
+
+	virtual void push(IntVal& v_a) {
+		vals_[top_] = v_a;
+		asnd_[v_a.v] = v_a.aop ? true : false;
+		++top_;
+	};
+
+	virtual IntVal pop() {
+		--top_;
+		asnd_[vals_[top_].v] = false;
+		return vals_[top_];
+	};
+
+	IntVal top() const { return vals_[top_]; };
+	int size() const { return top_; }
+	int capacity() const { return size_; }
+	bool full() const { return top_ == size_; }
+	bool empty() const { return top_ == 0; }
+	IntVal operator[](const int i) const { return vals_[i]; };
+	IntVal at(const int i) const { return vals_[i]; };
+	void clear() { top_ = 0; };
+	bool assiged(const int v) const { return asnd_[v]; };
+
+	friend std::ostream& operator<< (std::ostream &os, AssignedStack &I) {
+		for (int i = 0; i < I.size(); ++i)
+			os << "(" << I[i] << ")\t";
+		return os;
+	};
+
+	friend std::ostream& operator<< (std::ostream &os, AssignedStack* I) {
+		for (int i = 0; i < I->size(); ++i)
+			os << "(" << I->at(i) << ")\t";
+		return os;
+	};
+
+protected:
+	HModel *m_;
+	std::vector<IntVal> vals_;
+	std::vector<bool> asnd_;
+	int top_ = 0;
+	int size_;
+};
+
+class CacheStack :AssignedStack {
+public:
+	CacheStack() {};
+
+	virtual void initial(HModel* m, const int stack_size = MAXCACHESIZE) {
+		m_ = m;
+		vals_.resize(stack_size);
+		size_ = stack_size;
+	};
+
+	virtual void push(IntVal& v_a) {
+		vals_[top_] = v_a;
+		++top_;
+	};
+
+	virtual IntVal pop() {
+		--top_;
+		return vals_[top_];
+	};
+
+	virtual void clear() {
+		top_ = 0;
+	}
+
+	virtual ~CacheStack() {};
+private:
+	int cache_top_ = 0;
+
+};
+
+
+//搜索8层记录一次
+class NetworkStack {
+public:
+	NetworkStack() {};
+
+	void initial(HModel* m, AssignedStack* I) {
+		m_ = m;
+		I_ = I;
+		vs_size_ = m->property.vs_size;
+		mds_ = m_->property.max_dom_size;
+		bsd_.resize(vs_size_, std::vector<std::vector<u32>>(mds_, std::vector<u32>(vs_size_)));
+
+		//拷贝数据结构
+		for (size_t i = 0; i < vs_size_; i++)
+			for (size_t j = 0; j < mds_; j++)
+				for (size_t k = 0; k < vs_size_; k++)
+					bsd_[i][j][k] = h_bitSubDom[GetBitSubDomIndexHost(i, j, k)];
+
+		//初始化中间变量
+		r_.resize(vs_size_, 0);
+		for (size_t i = 0; i < vs_size_; i++) {
+			r_[i] = h_bitDom[i];
+		}
+		////初始化缓冲栈 缓冲栈并非循环队列
+		//ac_.initial(m);
+		//nc_.resize(MAXCACHESIZE, std::vector<u32>(vs_size_));
+
+		s_.push_back(r_);
+
+	}
+
+	//考虑一次实例化后赋两个值的巧合
+	SearchState push_back(IntVal& val) {
+		return val.aop ? reduce_dom(val) : remove_value(val);
+	};
+
+	SearchState reduce_dom(IntVal& val) {
+		//若当前网络已经删除将要赋值的val
+		if (!(s_.back()[val.v] & bsd_[val.v][val.a][val.v]))
+			return S_FAILED;
+		//--------------------制作r_---------------------------
+		r_.assign(vs_size_, 0);
+		//所有变量都要做一次按位运算
+		for (size_t i = 0; i < vs_size_; i++) {
+			r_[i] = s_.back()[i] & bsd_[val.v][val.a][i];
+			//有变量域变空
+			if (r_[i] == 0)
+				return S_FAILED;
+		}
+		//--------------------制作r_---------------------------
+
+		//将AC的r_加入队列中
+		//AC成功
+		s_.push_back(r_);
+
+		return S_BRANCH;
+	}
+
+	//从网络中删除val
+	SearchState remove_value(IntVal& val) {
+		//--------------------制作r_---------------------------
+		r_.assign(vs_size_, 0);
+		//先删该点val
+		s_.back()[val.v] &= U32_MASK0[val.a];
+		if (s_.back()[val.v] == 0)
+			return S_FAILED;
+
+		//遍历该变量中所的有值
+		for (size_t i = 0; i < m_->vars[val.v]->size; ++i)
+			//若变量值已不存在，跳过
+			if (s_.back()[val.v] & U32_MASK1[i])
+				//生成subDom(x != a)
+				for (size_t j = 0; j < vs_size_; ++j)
+					r_[j] |= bsd_[val.v][i][j];
+		//--------------------制作r_---------------------------
+		//所有变量都要做一次按位运算
+		for (size_t i = 0; i < vs_size_; i++) {
+			r_[i] &= s_.back()[i];
+			//有变量域变空
+			if (r_[i] == 0)
+				return S_FAILED;
+		}
+		//--------------------制作r_---------------------------
+
+		//将AC的r_加入队列中
+		//AC成功
+		s_.push_back(r_);
+
+		return S_BRANCH;
+	};
+
+	std::vector<u32>& back() {
+		return s_.back();
+	};
+
+	void pop_back() {
+		s_.pop_back();
+	}
+
+	bool empty() {
+		return s_.empty();
+	}
+
+	//void cache_push(Int) {
+
+	//};
+
+	void recompute() {};
+
+	void clear_cache() {
+		//cache_top_ == 0;
+	};
+
+	std::vector<std::vector<std::vector<u32>>>& bitSubDom() {
+		return bsd_;
+	};
+
+	int size()const {
+		return s_.size();
+	}
+
+	IntVal selectIntVal(const VarHeuristic vrh, const ValHeuristic vlh = VLH_MIN) {
+		int var = select_var(vrh);
+		int val = select_val(var, vlh);
+		return IntVal(var, val);
+	};
+
+	int select_var(const VarHeuristic vrh) {
+
+		if (vrh == VRH_DOM) {
+			//std::vector<u32>::iterator smt = std::min_element(s_.back().begin(), s_.back().end());
+			//return smt - s_.back().begin();
+			int smt = INT_MAX;
+			int idx = 0;
+			int cnt;
+			for (size_t i = 0; i < vs_size_; ++i) {
+				//该变量未被赋值，则统计论域大小
+				if (!I_->assiged(i)) {
+					cnt = _mm_popcnt_u32(s_.back()[i]);
+					if (cnt < smt) {
+						smt = cnt;
+						idx = i;
+					}
+				}
+			}
+			return idx;
+		}
+		else if (vrh == VRH_LEX) {
+			return I_->size();
+		}
+
+	};
+
+	int select_val(const int var, const ValHeuristic vlh) {
+		switch (vlh) {
+		case VLH_MIN:
+			return _32f1(s_.back()[var]);
+		default:
+			break;
+		}
+
+	};
+	~NetworkStack() {};
+private:
+	//top的最大值是vs_size+1;
+	//int top_ = 0;
+	////主网络栈8层一个记录
+	std::deque<std::vector<u32>> s_;
+	//缓冲栈只记录最新的8层网络
+	HModel* m_;
+	int vs_size_;
+	int mds_;
+	//计算删值后网络bitDom的中间变量
+	std::vector<u32> r_;
+	//bitSubDom网络
+	std::vector<std::vector<std::vector<u32>>> bsd_;
+
+	AssignedStack *I_;
+	////赋值缓冲栈
+	//CacheStack ac_;
+	////网络缓冲栈
+	//int cache_top_ = 0;
+	//std::vector<std::vector<u32>> nc_;
+};
+
+class CPUSolver {
+public:
+	AssignedStack I;
+	CPUSolver(HModel *m) :m_(m) {
+		I.initial(m_);
+		ns_.initial(m_, &I);
+	};
+	~CPUSolver() {};
+
+
+
+	SearchStatistics MAC() {
+		bool finished = false;
+		IntVal val;
+		SearchState state;
+		SearchStatistics statistics;
+
+		while (!finished) {
+			val = ns_.selectIntVal(VRH_DOM, VLH_MIN);
+			I.push(val);
+			state = ns_.push_back(val);
+
+			if ((state == S_BRANCH) && I.full()) {
+				std::cout << I << std::endl;
+				statistics.ns_deep = ns_.size();
+				++statistics.num_sol;
+				return statistics;
+			}
+
+			while (!(state == S_BRANCH) && !I.empty()) {
+				val = I.pop();
+				//ns_.pop_back();
+				val.flop();
+				state = ns_.push_back(val);
+			}
+
+			if (!(state == S_BRANCH))
+				finished = true;
+		}
+	};
+
+private:
+	HModel* m_;
+	NetworkStack ns_;
+};
 }
