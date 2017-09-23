@@ -24,26 +24,26 @@ int main() {
 	XBuilder path_builder(X_PATH, XRT_BM_PATH);
 	string bm_path = path_builder.GetBMFile();
 	const string bmp_root = "E:/Projects/benchmarks/";
-	const string bmp_folder[4] = {
-		"tightness0.1/rand-2-40-8-753-100-",
-		"tightness0.2/rand-2-40-11-414-200-",
-		"tightness0.35/rand-2-40-16-250-350-",
-		"tightness0.5/rand-2-40-25-180-500-" };
+	//const string bmp_folder[4] = {
+	//	"tightness0.1/rand-2-40-8-753-100-",
+	//	"tightness0.2/rand-2-40-11-414-200-",
+	//	"tightness0.35/rand-2-40-16-250-350-",
+	//	"tightness0.5/rand-2-40-25-180-500-" };
+	const string bmp_folder[1] = { "frb30-15/frb30-15-" };
 	const string bmp_ext = "_ext.xml";
 
-	for (size_t i = 3; i < 4; i++) {
+	for (size_t i = 0; i < 1; i++) {
 #ifdef LOGFILE
 		ofstream lofi;
-		const string bm_res = bmp_root + "res/" + bmp_folder[i].substr(0, bmp_folder[0].find("/")) + ".txt";
+		const string bm_res = bmp_root + "res/" + bmp_folder[i].substr(0, bmp_folder[0].find("/")) + "bi.txt";
 		lofi.open(bm_res, ios::out | ios::app);
 		cout << bm_res << endl;
 		if (!lofi.is_open())
 			return 0;
 #endif
-		for (size_t j = 0; j < 100; j++) {
+		for (size_t j = 1; j < 6; j++) {
 			const string num = tostr<int>(j);
 			const string bm_path = bmp_root + bmp_folder[i] + num + bmp_ext;
-			//const string bm_path = "E:/Projects/benchmarks/tightness0.5/rand-2-40-25-180-500-2_ext.xml";
 			cout << bm_path << endl;
 
 #ifdef LOGFILE

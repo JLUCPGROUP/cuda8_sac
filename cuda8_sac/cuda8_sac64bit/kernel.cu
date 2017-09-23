@@ -22,10 +22,11 @@ int main() {
 	HBuilder hbuilder(xmodel, hmodel);
 	//hbuilder.ShowHModel();
 	BuidBitModel64bit(hmodel);
-	SACGPU();
+	float exe_time = SACGPU();
 	DelGPUModel();
 	delete hmodel;
 	delete xmodel;
+	cout << "Execution time = " << exe_time << endl;
 	printf("---end---\n");
 	return 0;
 }

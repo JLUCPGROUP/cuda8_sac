@@ -196,6 +196,7 @@ inline int GetSVarPreIdxHost(int x, int a, int y) {
 static __inline__ __device__ void DelMainValDevice(uint2* bitDom, int* mVarPre, int x, int a) {
 	const int int_idx = a / U32_BIT;
 	const int offset = a%U32_BIT;
+	printf("%d, %d should be delete!\n", x, a);
 	if (int_idx == 0) {
 		//删(x,a)
 		//a位于第一个int中
@@ -540,7 +541,7 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 		if (s_bitSubDom.x != l_res.x) {
 			atomicAnd(&bitSubDom[s_bitSubDomIdx.x].x, l_res.x);
 			sVarPre[s_sVarPreIdx.x] = 1;
-
+			printf("(%d, %d, %d), %8x\n", s_scp.x, s_scp.y, s_scp.z, bitSubDom[s_bitSubDomIdx.x].x);
 			if ((bitSubDom[s_bitSubDomIdx.x].x || bitSubDom[s_bitSubDomIdx.x].y) == 0) {
 				sVarPre[s_sVarPreIdx.x] = INT_MIN;
 				DelMainValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
@@ -551,7 +552,7 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 		if (s_bitSubDom.z != l_res.z) {
 			atomicAnd(&bitSubDom[s_bitSubDomIdx.y].x, l_res.z);
 			sVarPre[s_sVarPreIdx.y] = 1;
-
+			printf("(%d, %d, %d), %8x\n", s_scp.x, s_scp.y, s_scp.z, bitSubDom[s_bitSubDomIdx.y].y);
 			if ((bitSubDom[s_bitSubDomIdx.y].x || bitSubDom[s_bitSubDomIdx.y].y) == 0) {
 				sVarPre[s_sVarPreIdx.y] = INT_MIN;
 				DelMainValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
@@ -565,7 +566,7 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 		if (s_bitSubDom.y != l_res.y) {
 			atomicAnd(&bitSubDom[s_bitSubDomIdx.x].y, l_res.y);
 			sVarPre[s_sVarPreIdx.x] = 1;
-
+			printf("(%d, %d, %d), %8x\n", s_scp.x, s_scp.y, s_scp.z, bitSubDom[s_bitSubDomIdx.x].y);
 			if ((bitSubDom[s_bitSubDomIdx.x].x || bitSubDom[s_bitSubDomIdx.x].y) == 0) {
 				sVarPre[s_sVarPreIdx.x] = INT_MIN;
 				DelMainValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
@@ -576,7 +577,7 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 		if (s_bitSubDom.w != l_res.w) {
 			atomicAnd(&bitSubDom[s_bitSubDomIdx.y].y, l_res.w);
 			sVarPre[s_sVarPreIdx.y] = 1;
-
+			printf("(%d, %d, %d), %8x\n", s_scp.x, s_scp.y, s_scp.z, bitSubDom[s_bitSubDomIdx.y].y);
 			if ((bitSubDom[s_bitSubDomIdx.y].x || bitSubDom[s_bitSubDomIdx.y].y) == 0) {
 				sVarPre[s_sVarPreIdx.y] = INT_MIN;
 				DelMainValDevice(bitDom, mVarPre, s_cevt.x, s_cevt.y);
@@ -585,58 +586,6 @@ __global__ void CsCheckSub(int3* sConEvt, int* sVarPre, int* mVarPre, int3* scop
 	}
 	__syncthreads();
 }
-
-//__global__ void CsCheckMainLocal(int* mConEvt, int* mVarPre, int3* scope, uint2* bitDom, uint4* bitSup) {
-//	const int bid = blockIdx.x;
-//	const int tid = threadIdx.x;
-//	const int c_id = mConEvt[bid];
-//	const int3 l_scp = scope[c_id];
-//	const uint4 l_bitDom = make_uint4(bitDom[l_scp.x].x, bitDom[l_scp.x].y, bitDom[l_scp.y].x, bitDom[l_scp.y].y);
-//
-//	uint4 l_sum = make_uint4(0, 0, 0, 0);
-//	uint4 l_res = make_uint4(0, 0, 0, 0);
-//	__syncthreads();
-//
-//	for (int i = tid; i < D_MDS; i += WORKSIZE) {
-//		//if (tid < D_MDS)
-//		l_sum |= bitSup[GetBitSupIdxDevice(l_scp.z, i)];
-//	}
-//	__syncthreads();
-//
-//	//归约
-//	l_sum.x &= l_bitDom.z;
-//	l_sum.y &= l_bitDom.w;
-//	l_sum.z &= l_bitDom.x;
-//	l_sum.w &= l_bitDom.y;
-//	__syncthreads();
-//
-//	//投票并反转
-//	l_res.x = __brev(__ballot(l_sum.x));
-//	l_res.y = __brev(__ballot(l_sum.y));
-//	__syncthreads();
-//
-//	if (tid == 0) {
-//		//		printf("c = %d, x = %x, y = %x\n", s_scp.z, l_res.x, l_res.y);
-//		//存入全局内存,并记录改变
-//		l_res.x &= l_bitDom.x;
-//		if (l_bitDom.x != l_res.x) {
-//			atomicAnd(&bitDom[l_scp.x], l_res.x);
-//			mVarPre[l_scp.x] = 1;
-//
-//			if (bitDom[l_scp.x] == 0)
-//				mVarPre[l_scp.x] = INT_MIN;
-//		}
-//
-//		l_res.y &= l_bitDom.y;
-//		if (l_bitDom.y != l_res.y) {
-//			atomicAnd(&bitDom[l_scp.y], l_res.y);
-//			mVarPre[l_scp.y] = 1;
-//
-//			if (bitDom[l_scp.x] == 0)
-//				mVarPre[l_scp.x] = INT_MIN;
-//		}
-//	}
-//}
 
 __global__ void UpdateSubDom(uint2* bitDom, uint2* bitSubDom, int* SVarPre, int* var_size, int vs_size) {
 	const int val = blockIdx.x;
@@ -801,15 +750,15 @@ float BuidBitModel64bit(HModel * hm) {
 
 
 #ifdef SHOWDATA
-	//for (int i = 0; i < H_VS_SIZE; ++i) {
-	//	for (int j = 0; j < H_MDS; ++j) {
-	//		//若(i, j)子问题
-	//		for (int k = 0; k < H_VS_SIZE; ++k) {
-	//			const int idx = GetBitSubDomIndexHost(i, j, k);
-	//			printf("idx = %d, (%d, %d, %d): %8x %8x\n", idx, i, j, k, h_bitSubDom[idx].x, h_bitSubDom[idx].y);
-	//		}
-	//	}
-	//}
+	for (int i = 0; i < H_VS_SIZE; ++i) {
+		for (int j = 0; j < H_MDS; ++j) {
+			//若(i, j)子问题
+			for (int k = 0; k < H_VS_SIZE; ++k) {
+				const int idx = GetBitSubDomIndexHost(i, j, k);
+				printf("idx = %d, (%d, %d, %d): %8x %8x\n", idx, i, j, k, h_bitSubDom[idx].x, h_bitSubDom[idx].y);
+			}
+		}
+	}
 #endif // SHOWDATA
 
 	//// dim.x dim.y dim.z
@@ -1196,8 +1145,8 @@ float SACGPU() {
 		ConstraintsCheckMain(mc_total);
 		////1.4. 流压缩取得约束队列
 		mc_total = CompactConsQueMain(H_MCCBLOCK, H_MVCBLOCK, WORKSIZE, WORKSIZE_LARGE, d_MCCBCount, d_MCCBOffset);
-		std::cout << "mc_total = " << mc_total << std::endl;
-		showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
+		//std::cout << "mc_total = " << mc_total << std::endl;
+		//showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
 	} while (mc_total > 0);
 	//showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
 	//////////////////////////////////////////////////////////////////////////
@@ -1230,7 +1179,7 @@ float SACGPU() {
 	const int con_threads = GetTopNum(H_CS_SIZE, WORKSIZE)*WORKSIZE;
 	//2.2. 压缩子问题队列
 	int sc_total = CompactConsQueSub(subblock_dim, H_SVCBLOCK, H_VS_SIZE, H_CS_SIZE, con_threads, WORKSIZE_LARGE, d_SCCBCount, d_SCCBOffset);
-	//std::cout << "sc_total = " << sc_total << std::endl;
+	std::cout << "sc_total = " << sc_total << std::endl;
 
 
 	//2.3. 子问题上约束检查
@@ -1238,13 +1187,13 @@ float SACGPU() {
 		ConstraintsCheckSub(sc_total);
 		//2.4. 主问题上流压缩取得约束队列
 		int mc_total = CompactConsQueMain(H_MCCBLOCK, H_MVCBLOCK, WORKSIZE, WORKSIZE_LARGE, d_MCCBCount, d_MCCBOffset);
-		//std::cout << "mc_total = " << mc_total << std::endl;
+		std::cout << "2.3 mc_total = " << mc_total << std::endl;
 		while (mc_total > 0) {
 			////2.5. 约束检查
 			ConstraintsCheckMain(mc_total);
 			////2.6. 流压缩取得约束队列
 			mc_total = CompactConsQueMain(H_MCCBLOCK, H_MVCBLOCK, WORKSIZE, WORKSIZE_LARGE, d_MCCBCount, d_MCCBOffset);
-			//std::cout << "mc_total = " << mc_total << std::endl;
+			std::cout << "2.6 mc_total = " << mc_total << std::endl;
 		}
 
 		//1.5. 失败返回
@@ -1260,8 +1209,9 @@ float SACGPU() {
 		}
 
 		sc_total = CompactConsQueSub(subblock_dim, H_SVCBLOCK, H_VS_SIZE, H_CS_SIZE, con_threads, WORKSIZE_LARGE, d_SCCBCount, d_SCCBOffset);
-		//std::cout << "sc_total = " << sc_total << std::endl;
+		std::cout << "sc_total = " << sc_total << std::endl;
 	}
+	showVariables << <H_MVCount, WORKSIZE >> > (d_bitDom, d_MVarPre, d_var_size, H_VS_SIZE);
 
 	//更新子问题论域
 	cudaEventRecord(stop, 0);
