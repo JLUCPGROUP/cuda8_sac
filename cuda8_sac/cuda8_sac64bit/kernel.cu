@@ -4,7 +4,7 @@
 #include <string>
 #include "model/XBuilder.h"
 #include "model/HBuilder.h"
-#include "cuda_sac.cuh"
+#include "cuda_sac64.cuh"
 #undef DOMDocument
 
 using namespace std;
@@ -23,6 +23,7 @@ int main() {
 	//hbuilder.ShowHModel();
 	BuidBitModel64bit(hmodel);
 	float exe_time = SACGPU();
+	//CopyBitSubDom();
 	DelGPUModel();
 	delete hmodel;
 	delete xmodel;

@@ -14,6 +14,6 @@
     </Xml>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cuda_sac.cuh" />
+    <ClInclude Include="cuda_sac64.cuh" />
   </ItemGroup>
 </Project>

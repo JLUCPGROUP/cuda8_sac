@@ -30,7 +30,7 @@
     <Xml Include="BMPath.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cuda_sac.cuh" />
+    <ClInclude Include="cuda_sac64.cuh" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3A7B07FB-FDC5-489B-9530-41F6E52F7EC7}</ProjectGuid>

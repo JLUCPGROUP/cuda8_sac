@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <BenchMark>
   <BMFiles nbBMFiles = "1">
-    <BMFile id ="0">E:/Projects/benchmarks/queenAttacking/queenAttacking-6.xml</BMFile>
-    <!--<BMFile id ="0">E:/Projects/benchmarks/tightness0.65/rand-2-40-40-135-650-0_ext.xml</BMFile>-->
+    <BMFile id ="0">G:/Projects/benchmarks/queenAttacking/queenAttacking-6.xml</BMFile>
+    <!--<BMFile id ="0">G:/Projects/benchmarks/tightness0.65/rand-2-40-40-135-650-0_ext.xml</BMFile>-->
   </BMFiles>
 </BenchMark>
